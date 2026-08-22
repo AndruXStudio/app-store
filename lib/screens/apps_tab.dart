@@ -60,9 +60,10 @@ class _AppsTabState extends State<AppsTab> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               children: [
-                _sourceChip(provider, '全部源', 'all'),
+                _sourceChip(provider, '全部', 'all'),
+                _sourceChip(provider, '信任库', 'catalog'),
                 _sourceChip(provider, 'F-Droid', 'fdroid'),
-                _sourceChip(provider, 'GitHub APK', 'github'),
+                _sourceChip(provider, 'GitHub', 'github'),
               ],
             ),
           ),
@@ -71,7 +72,7 @@ class _AppsTabState extends State<AppsTab> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                '仅显示可下载的 APK（聚合多站点）',
+                '信任库 = 你在 Supabase 上架的 APK；其它源为公开开源站',
                 style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ),
@@ -84,8 +85,18 @@ class _AppsTabState extends State<AppsTab> {
                     child: list.isEmpty
                         ? ListView(
                             children: const [
-                              SizedBox(height: 120),
-                              Center(child: Text('暂无 APK，下拉刷新或切换源')),
+                              SizedBox(height: 100),
+                              Center(child: Text('暂无应用')),
+                              SizedBox(height: 8),
+                              Center(
+                                child: Padding(
+                                  padding: EdgeInsets.symmetric(horizontal: 32),
+                                  child: Text(
+                                    '信任库为空时，请在 Supabase 的 apps 表插入数据',
+                                    textAlign: TextAlign.center,
+                                  ),
+                                ),
+                              ),
                             ],
                           )
                         : ListView.builder(
@@ -119,11 +130,12 @@ class _AppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final src = app.source == 'fdroid'
-        ? 'F-Droid'
-        : app.source == 'github'
-            ? 'GitHub'
-            : (app.source ?? '');
+    String src = switch (app.source) {
+      'catalog' => '信任库',
+      'fdroid' => 'F-Droid',
+      'github' => 'GitHub',
+      _ => app.source ?? '',
+    };
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: ClipRRect(
@@ -152,11 +164,8 @@ class _AppTile extends StatelessWidget {
             children: [
               if (src.isNotEmpty) _tag(src),
               _tag('APK'),
-              if (app.language != null) _tag(app.language!),
-              Text(
-                '${app.version} · ${app.size}',
-                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
+              Text('${app.version} · ${app.size}',
+                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ],
           ),
         ],

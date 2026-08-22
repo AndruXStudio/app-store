@@ -1,16 +1,23 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/app_model.dart';
+import 'catalog_service.dart';
 
-/// 多源 APK 聚合：只返回带 APK 下载的应用
+/// 多源 APK 聚合：信任库(Supabase) + F-Droid + GitHub(APK)
 class ApkSourceService {
   static const _ua = 'AnNexus/1.0 (Android; APK-Store)';
+  final CatalogService _catalog = CatalogService();
 
-  /// source: all | fdroid | github
+  /// source: all | catalog | fdroid | github
   Future<List<AppModel>> search(String query, {String source = 'all'}) async {
     final results = <AppModel>[];
     final q = query.trim();
 
+    if (source == 'all' || source == 'catalog') {
+      try {
+        results.addAll(await _catalog.search(q));
+      } catch (_) {}
+    }
     if (source == 'all' || source == 'fdroid') {
       try {
         results.addAll(await _searchFdroid(q));
@@ -22,11 +29,10 @@ class ApkSourceService {
       } catch (_) {}
     }
 
-    // 去重（按名称+开发者）
     final seen = <String>{};
     final unique = <AppModel>[];
     for (final a in results) {
-      final key = '${a.name.toLowerCase()}|${a.developer.toLowerCase()}';
+      final key = '${a.name.toLowerCase()}|${a.packageName ?? a.developer}'.toLowerCase();
       if (seen.add(key)) unique.add(a);
     }
     return unique;
@@ -34,6 +40,11 @@ class ApkSourceService {
 
   Future<List<AppModel>> featured({String source = 'all'}) async {
     final results = <AppModel>[];
+    if (source == 'all' || source == 'catalog') {
+      try {
+        results.addAll(await _catalog.fetchAll());
+      } catch (_) {}
+    }
     if (source == 'all' || source == 'fdroid') {
       try {
         results.addAll(await _fdroidFeatured());
@@ -50,6 +61,11 @@ class ApkSourceService {
 
   Future<List<AppModel>> games({String source = 'all'}) async {
     final results = <AppModel>[];
+    if (source == 'all' || source == 'catalog') {
+      try {
+        results.addAll(await _catalog.fetchAll(category: 'game'));
+      } catch (_) {}
+    }
     if (source == 'all' || source == 'fdroid') {
       try {
         final all = await _fdroidFeatured();
@@ -61,53 +77,33 @@ class ApkSourceService {
         results.addAll(await _searchGithubApk('android game apk'));
       } catch (_) {}
     }
-    if (results.isEmpty) {
-      return _fallbackSamples().where((a) => a.category == 'game').toList();
-    }
     return results;
   }
 
-  // ---------- F-Droid ----------
-  // 使用公开包信息 API + 一批热门包名（稳定、免魔法）
   static const _fdroidPopular = [
     'org.fdroid.fdroid',
     'com.termux',
-    'org.mozilla.fennec_fdroid',
-    'com.simplemobiletools.gallery.pro',
-    'org.thoughtcrime.securesms',
-    'com.nextcloud.client',
-    'org.videolan.vlc',
-    'net.osmand.plus',
-    'com.fsck.k9',
-    'org.telegram.messenger',
-    'com.aurora.store',
     'org.schabi.newpipe',
+    'org.videolan.vlc',
+    'com.simplemobiletools.gallery.pro',
+    'com.nextcloud.client',
+    'com.fsck.k9',
     'com.amaze.filemanager',
     'org.kde.kdeconnect_tp',
-    'com.simplemobiletools.calendar.pro',
-    'org.documentfoundation.libreoffice',
     'com.kunzisoft.keepass.libre',
-    'org.billthefarmer.editor',
-    'com.iven.itsmusic',
     'org.tasks',
-    'com.github.axet.audiorecorder',
-    'nya.kitsunyan.foxydroid',
     'com.looker.droidify',
     'org.fossify.gallery',
-    'org.fossify.messages',
-    'com.limelight',
-    'com.pciedric.jellyfin',
-    'org.jellyfin.mobile',
-    'chat.simplex.app',
     'im.vector.app',
+    'chat.simplex.app',
+    'org.jellyfin.mobile',
+    'net.osmand.plus',
+    'com.aurora.store',
   ];
 
   Future<List<AppModel>> _fdroidFeatured() async {
     final list = <AppModel>[];
-    // 并行拉取一部分
-    final packages = _fdroidPopular.take(24).toList();
-    final futures = packages.map(_fdroidPackage);
-    final results = await Future.wait(futures);
+    final results = await Future.wait(_fdroidPopular.take(18).map(_fdroidPackage));
     for (final a in results) {
       if (a != null) list.add(a);
     }
@@ -118,19 +114,16 @@ class ApkSourceService {
     if (query.isEmpty) return _fdroidFeatured();
     final list = <AppModel>[];
     final q = query.toLowerCase();
-    // 先在热门里滤
     for (final pkg in _fdroidPopular) {
       if (pkg.toLowerCase().contains(q)) {
         final a = await _fdroidPackage(pkg);
         if (a != null) list.add(a);
       }
     }
-    // 再尝试把 query 当 package name
     if (query.contains('.')) {
       final a = await _fdroidPackage(query);
       if (a != null) list.add(a);
     }
-    // F-Droid 网站搜索页无稳定 JSON，补充 GitHub 结果由上层合并
     return list;
   }
 
@@ -156,34 +149,18 @@ class ApkSourceService {
 
       final version = best['versionName']?.toString() ?? '1.0';
       final versionCode = best['versionCode']?.toString() ?? '';
-      // F-Droid 直链
       final apkUrl = 'https://f-droid.org/repo/${pkg}_$versionCode.apk';
-      // 部分用不同命名，备选
-      final apkUrlAlt = 'https://f-droid.org/repo/$pkg-$version.apk';
-
       final sizeBytes = best['size'] as int? ?? 0;
       final size = _fmtSize(sizeBytes);
-
-      // 详情页补全名称（API 较简）
-      String name = pkg.split('.').last;
-      String desc = 'F-Droid 开源应用';
-      String icon = 'https://f-droid.org/repo/icons-640/$pkg.png';
-      try {
-        final page = await http.get(
-          Uri.parse('https://f-droid.org/api/v1/packages/$pkg'),
-          headers: {'User-Agent': _ua},
-        );
-        // 使用 package 名美化
-        name = pkg.replaceAll(RegExp(r'.*\.'), '').replaceAll('_', ' ');
-        name = name.isEmpty ? pkg : '${name[0].toUpperCase()}${name.substring(1)}';
-      } catch (_) {}
+      var name = pkg.split('.').last.replaceAll('_', ' ');
+      if (name.isNotEmpty) name = '${name[0].toUpperCase()}${name.substring(1)}';
 
       return AppModel(
         id: 'fdroid_$pkg',
         name: name,
         developer: 'F-Droid',
-        description: desc,
-        iconUrl: icon,
+        description: 'F-Droid 开源应用 · $pkg',
+        iconUrl: 'https://f-droid.org/repo/icons-640/$pkg.png',
         rating: 4.5,
         downloads: 10000,
         category: 'app',
@@ -191,42 +168,24 @@ class ApkSourceService {
         size: size,
         downloadUrl: apkUrl,
         githubUrl: 'https://f-droid.org/packages/$pkg/',
-        language: null,
         fileType: 'apk',
         packageName: pkg,
-        assets: [
-          {
-            'name': '$pkg-$version.apk',
-            'url': apkUrl,
-            'size': size,
-            'fileType': 'apk',
-          },
-          {
-            'name': '$pkg-$version-alt.apk',
-            'url': apkUrlAlt,
-            'size': size,
-            'fileType': 'apk',
-          },
-        ],
         source: 'fdroid',
+        assets: [
+          {'name': '$pkg-$version.apk', 'url': apkUrl, 'size': size, 'fileType': 'apk'},
+        ],
       );
     } catch (_) {
       return null;
     }
   }
 
-  // ---------- GitHub（仅 APK）----------
   Future<List<AppModel>> _searchGithubApk(String query) async {
     final q = query.isEmpty
         ? 'android apk extension:apk stars:>20'
         : '$query android apk';
     final uri = Uri.parse('https://api.github.com/search/repositories').replace(
-      queryParameters: {
-        'q': q,
-        'sort': 'stars',
-        'order': 'desc',
-        'per_page': '20',
-      },
+      queryParameters: {'q': q, 'sort': 'stars', 'order': 'desc', 'per_page': '15'},
     );
     final res = await http.get(uri, headers: {
       'Accept': 'application/vnd.github.v3+json',
@@ -237,7 +196,7 @@ class ApkSourceService {
     final items = data['items'] as List? ?? [];
     final list = <AppModel>[];
 
-    for (final item in items.take(12)) {
+    for (final item in items.take(10)) {
       Map<String, dynamic>? release;
       try {
         final relUri =
@@ -252,7 +211,6 @@ class ApkSourceService {
       } catch (_) {}
 
       final app = AppModel.fromGithubRelease(item as Map<String, dynamic>, release);
-      // 只保留有 APK 的
       final apkAssets = app.assets.where((a) => a['fileType'] == 'apk').toList();
       if (apkAssets.isEmpty && app.fileType != 'apk') continue;
 
@@ -273,7 +231,6 @@ class ApkSourceService {
         githubUrl: app.githubUrl,
         language: app.language,
         fileType: 'apk',
-        packageName: app.packageName,
         assets: apkAssets.isNotEmpty ? apkAssets : app.assets,
         source: 'github',
       ));
@@ -302,20 +259,6 @@ class ApkSourceService {
         fileType: 'apk',
         source: 'fdroid',
         packageName: 'org.schabi.newpipe',
-      ),
-      AppModel(
-        id: 'sample_termux',
-        name: 'Termux',
-        developer: 'termux',
-        description: 'Android 终端与 Linux 环境',
-        iconUrl: 'https://f-droid.org/repo/icons-640/com.termux.png',
-        category: 'app',
-        version: '0.118.0',
-        size: '45 MB',
-        downloadUrl: 'https://f-droid.org/packages/com.termux/',
-        fileType: 'apk',
-        source: 'fdroid',
-        packageName: 'com.termux',
       ),
     ];
   }
