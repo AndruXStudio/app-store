@@ -39,7 +39,7 @@ class _SearchScreenState extends State<SearchScreen> {
           controller: _controller,
           focusNode: _focus,
           decoration: const InputDecoration(
-            hintText: '搜索应用、游戏、开发者...',
+            hintText: '搜索 APK 应用...',
             border: InputBorder.none,
           ),
           textInputAction: TextInputAction.search,
@@ -73,7 +73,7 @@ class _SearchScreenState extends State<SearchScreen> {
                       Icon(Icons.search_off_rounded, size: 64, color: Colors.grey.shade400),
                       const SizedBox(height: 12),
                       Text(
-                        provider.searchQuery.isEmpty ? '输入关键词搜索 GitHub 上的应用' : '未找到相关应用',
+                        provider.searchQuery.isEmpty ? '输入关键词搜索 APK（F-Droid / GitHub）' : '未找到相关应用',
                         style: TextStyle(color: Colors.grey.shade600),
                       ),
                     ],

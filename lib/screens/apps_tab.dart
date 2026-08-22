@@ -16,8 +16,6 @@ class AppsTab extends StatefulWidget {
 }
 
 class _AppsTabState extends State<AppsTab> {
-  String _filter = 'all'; // all | app | archive | language filters later
-
   @override
   void initState() {
     super.initState();
@@ -26,32 +24,11 @@ class _AppsTabState extends State<AppsTab> {
     });
   }
 
-  List<AppModel> _filtered(List<AppModel> all) {
-    if (_filter == 'all') return all;
-    if (_filter == 'archive') return all.where((a) => a.category == 'archive' || a.fileType == 'archive').toList();
-    if (_filter == 'app') {
-      return all.where((a) => a.category == 'app' || a.fileType == 'apk' || a.fileType == null).toList();
-    }
-    // language filter e.g. lang:Dart
-    if (_filter.startsWith('lang:')) {
-      final lang = _filter.substring(5).toLowerCase();
-      return all.where((a) => (a.language ?? '').toLowerCase() == lang).toList();
-    }
-    return all;
-  }
-
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
-    final list = _filtered(provider.apps);
-
-    // collect languages for chips
-    final langs = <String>{};
-    for (final a in provider.apps) {
-      if (a.language != null && a.language!.isNotEmpty) langs.add(a.language!);
-    }
-    final langList = langs.toList()..sort();
+    final list = provider.apps;
 
     return Scaffold(
       appBar: AppBar(
@@ -83,32 +60,38 @@ class _AppsTabState extends State<AppsTab> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
               children: [
-                _chip('全部', 'all'),
-                _chip('应用程序', 'app'),
-                _chip('压缩包', 'archive'),
-                ...langList.take(8).map((l) => _chip(l, 'lang:$l')),
+                _sourceChip(provider, '全部源', 'all'),
+                _sourceChip(provider, 'F-Droid', 'fdroid'),
+                _sourceChip(provider, 'GitHub APK', 'github'),
               ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                '仅显示可下载的 APK（聚合多站点）',
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
             ),
           ),
           Expanded(
             child: provider.loadingApps
                 ? const Center(child: CircularProgressIndicator())
                 : RefreshIndicator(
-                    onRefresh: () => context.read<AppProvider>().loadApps(),
+                    onRefresh: () => context.read<AppProvider>().refreshAll(),
                     child: list.isEmpty
                         ? ListView(
                             children: const [
                               SizedBox(height: 120),
-                              Center(child: Text('该分类下暂无内容')),
+                              Center(child: Text('暂无 APK，下拉刷新或切换源')),
                             ],
                           )
                         : ListView.builder(
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             itemCount: list.length,
-                            itemBuilder: (context, index) {
-                              final app = list[index];
-                              return _AppTile(app: app);
-                            },
+                            itemBuilder: (context, index) => _AppTile(app: list[index]),
                           ),
                   ),
           ),
@@ -117,14 +100,14 @@ class _AppsTabState extends State<AppsTab> {
     );
   }
 
-  Widget _chip(String label, String value) {
-    final selected = _filter == value;
+  Widget _sourceChip(AppProvider provider, String label, String value) {
+    final selected = provider.source == value;
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
         label: Text(label),
         selected: selected,
-        onSelected: (_) => setState(() => _filter = value),
+        onSelected: (_) => provider.setSource(value),
       ),
     );
   }
@@ -136,6 +119,11 @@ class _AppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final src = app.source == 'fdroid'
+        ? 'F-Droid'
+        : app.source == 'github'
+            ? 'GitHub'
+            : (app.source ?? '');
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: ClipRRect(
@@ -161,13 +149,12 @@ class _AppTile extends StatelessWidget {
           const SizedBox(height: 2),
           Wrap(
             spacing: 6,
-            runSpacing: 2,
             children: [
-              _miniTag(app.categoryLabel),
-              if (app.fileType != null) _miniTag(app.fileTypeLabel),
-              if (app.language != null) _miniTag(app.language!),
+              if (src.isNotEmpty) _tag(src),
+              _tag('APK'),
+              if (app.language != null) _tag(app.language!),
               Text(
-                '${app.rating.toStringAsFixed(1)} ★ · ${app.size}',
+                '${app.version} · ${app.size}',
                 style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
               ),
             ],
@@ -180,7 +167,7 @@ class _AppTile extends StatelessWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
         },
-        child: const Text('查看'),
+        child: const Text('下载'),
       ),
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
@@ -188,7 +175,7 @@ class _AppTile extends StatelessWidget {
     );
   }
 
-  Widget _miniTag(String text) {
+  Widget _tag(String text) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
       decoration: BoxDecoration(

@@ -1,9 +1,10 @@
 import 'package:flutter/foundation.dart';
 import '../models/app_model.dart';
-import '../services/github_service.dart';
+import '../services/apk_source_service.dart';
 
 class AppProvider extends ChangeNotifier {
-  final GithubService _github = GithubService();
+  final ApkSourceService _api = ApkSourceService();
+
   List<AppModel> _featured = [];
   List<AppModel> _apps = [];
   List<AppModel> _games = [];
@@ -13,6 +14,7 @@ class AppProvider extends ChangeNotifier {
   bool _loadingGames = false;
   bool _loadingSearch = false;
   String _searchQuery = '';
+  String _source = 'all'; // all | fdroid | github
 
   List<AppModel> get featured => _featured;
   List<AppModel> get apps => _apps;
@@ -23,21 +25,33 @@ class AppProvider extends ChangeNotifier {
   bool get loadingGames => _loadingGames;
   bool get loadingSearch => _loadingSearch;
   String get searchQuery => _searchQuery;
+  String get source => _source;
+
+  Future<void> setSource(String source) async {
+    if (_source == source) return;
+    _source = source;
+    _featured = [];
+    _apps = [];
+    _games = [];
+    notifyListeners();
+    await Future.wait([loadFeatured(), loadApps(), loadGames()]);
+  }
 
   Future<void> loadFeatured() async {
     if (_featured.isNotEmpty) return;
     _loadingFeatured = true;
     notifyListeners();
-    _featured = await _github.getFeaturedApps();
+    _featured = await _api.featured(source: _source);
     _loadingFeatured = false;
     notifyListeners();
   }
 
   Future<void> loadApps() async {
-    if (_apps.isNotEmpty) return;
     _loadingApps = true;
     notifyListeners();
-    _apps = await _github.searchApps('', category: 'app');
+    _apps = await _api.featured(source: _source);
+    // 只保留 apk
+    _apps = _apps.where((a) => a.fileType == 'apk' || a.fileType == null).toList();
     _loadingApps = false;
     notifyListeners();
   }
@@ -46,7 +60,7 @@ class AppProvider extends ChangeNotifier {
     if (_games.isNotEmpty) return;
     _loadingGames = true;
     notifyListeners();
-    _games = await _github.getGames();
+    _games = await _api.games(source: _source);
     _loadingGames = false;
     notifyListeners();
   }
@@ -60,7 +74,7 @@ class AppProvider extends ChangeNotifier {
     }
     _loadingSearch = true;
     notifyListeners();
-    _searchResults = await _github.searchApps(query);
+    _searchResults = await _api.search(query, source: _source);
     _loadingSearch = false;
     notifyListeners();
   }
@@ -69,5 +83,12 @@ class AppProvider extends ChangeNotifier {
     _searchQuery = '';
     _searchResults = [];
     notifyListeners();
+  }
+
+  Future<void> refreshAll() async {
+    _featured = [];
+    _apps = [];
+    _games = [];
+    await Future.wait([loadFeatured(), loadApps(), loadGames()]);
   }
 }

@@ -16,7 +16,8 @@ class AppModel {
   final String? packageName;
   final String? language; // 主要编程语言
   final String? fileType; // apk | zip | aab | tar | rar | 7z | ipa | other
-  final List<Map<String, dynamic>> assets; // 可下载资源列表
+  final List<Map<String, dynamic>> assets;
+  final String? source; // fdroid | github | apkpure // 可下载资源列表
 
   AppModel({
     required this.id,
@@ -37,6 +38,7 @@ class AppModel {
     this.language,
     this.fileType,
     this.assets = const [],
+    this.source,
   });
 
   factory AppModel.fromGithubRelease(Map<String, dynamic> repo, Map<String, dynamic>? release) {
@@ -111,6 +113,7 @@ class AppModel {
       language: language,
       fileType: fileType,
       assets: assetsList,
+      source: 'github',
     );
   }
 
