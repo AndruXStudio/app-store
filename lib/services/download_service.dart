@@ -35,10 +35,31 @@ class DownloadService extends ChangeNotifier {
   final List<DownloadTask> _tasks = [];
 
   List<DownloadTask> get tasks => List.unmodifiable(_tasks);
-  List<DownloadTask> get activeTasks =>
-      _tasks.where((t) => t.status == DownloadStatus.downloading || t.status == DownloadStatus.queued).toList();
+  List<DownloadTask> get activeTasks => _tasks
+      .where((t) => t.status == DownloadStatus.downloading || t.status == DownloadStatus.queued)
+      .toList();
   List<DownloadTask> get completedTasks =>
       _tasks.where((t) => t.status == DownloadStatus.completed).toList();
+
+  static String guessExtension(String url, String? name) {
+    final path = Uri.parse(url).path.toLowerCase();
+    final n = (name ?? '').toLowerCase();
+    const exts = [
+      '.apk', '.aab', '.ipa', '.zip', '.rar', '.7z', '.tar', '.tar.gz', '.tgz',
+      '.gz', '.bz2', '.xz', '.exe', '.msi', '.dmg', '.pkg', '.deb', '.rpm',
+      '.appimage', '.jar', '.bin', '.so', '.dll', '.txt', '.pdf', '.json',
+    ];
+    for (final e in exts) {
+      if (path.endsWith(e) || n.endsWith(e)) return e;
+    }
+    // path segments
+    final last = path.split('/').last;
+    if (last.contains('.')) {
+      final idx = last.lastIndexOf('.');
+      if (idx > 0) return last.substring(idx);
+    }
+    return '.bin';
+  }
 
   Future<void> startDownload({
     required String id,
@@ -70,19 +91,9 @@ class DownloadService extends ChangeNotifier {
       }
       final dir = await getApplicationDocumentsDirectory();
       await Directory('${dir.path}/downloads').create(recursive: true);
-      final baseName = name.replaceAll(RegExp(r'[^\w\s-]'), '');
-      String ext = '.bin';
-      final path = Uri.parse(url).path.toLowerCase();
-      if (path.endsWith('.apk')) {
-        ext = '.apk';
-      } else if (path.endsWith('.zip')) {
-        ext = '.zip';
-      } else if (path.endsWith('.aab')) {
-        ext = '.aab';
-      } else if (path.endsWith('.ipa')) {
-        ext = '.ipa';
-      }
-      final filePath = '${dir.path}/downloads/$baseName$ext';
+      final baseName = name.replaceAll(RegExp(r'[^\w\s\.\-]'), '_');
+      final ext = guessExtension(url, name);
+      final filePath = '${dir.path}/downloads/$baseName${baseName.toLowerCase().endsWith(ext) ? '' : ext}';
 
       await _dio.download(
         url,
@@ -113,9 +124,9 @@ class DownloadService extends ChangeNotifier {
 
   void cancelDownload(String id) {
     final task = _tasks.cast<DownloadTask?>().firstWhere(
-      (t) => t?.id == id,
-      orElse: () => null,
-    );
+          (t) => t?.id == id,
+          orElse: () => null,
+        );
     if (task != null) {
       task.cancelToken?.cancel();
       task.status = DownloadStatus.paused;
@@ -135,7 +146,8 @@ class DownloadService extends ChangeNotifier {
   }
 
   void clearCompleted() {
-    _tasks.removeWhere((t) => t.status == DownloadStatus.completed || t.status == DownloadStatus.failed);
+    _tasks.removeWhere(
+        (t) => t.status == DownloadStatus.completed || t.status == DownloadStatus.failed);
     notifyListeners();
   }
 }

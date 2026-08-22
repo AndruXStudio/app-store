@@ -16,6 +16,8 @@ class AppsTab extends StatefulWidget {
 }
 
 class _AppsTabState extends State<AppsTab> {
+  String _filter = 'all'; // all | app | archive | language filters later
+
   @override
   void initState() {
     super.initState();
@@ -24,10 +26,32 @@ class _AppsTabState extends State<AppsTab> {
     });
   }
 
+  List<AppModel> _filtered(List<AppModel> all) {
+    if (_filter == 'all') return all;
+    if (_filter == 'archive') return all.where((a) => a.category == 'archive' || a.fileType == 'archive').toList();
+    if (_filter == 'app') {
+      return all.where((a) => a.category == 'app' || a.fileType == 'apk' || a.fileType == null).toList();
+    }
+    // language filter e.g. lang:Dart
+    if (_filter.startsWith('lang:')) {
+      final lang = _filter.substring(5).toLowerCase();
+      return all.where((a) => (a.language ?? '').toLowerCase() == lang).toList();
+    }
+    return all;
+  }
+
   @override
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
+    final list = _filtered(provider.apps);
+
+    // collect languages for chips
+    final langs = <String>{};
+    for (final a in provider.apps) {
+      if (a.language != null && a.language!.isNotEmpty) langs.add(a.language!);
+    }
+    final langList = langs.toList()..sort();
 
     return Scaffold(
       appBar: AppBar(
@@ -51,19 +75,57 @@ class _AppsTabState extends State<AppsTab> {
           ),
         ],
       ),
-      body: provider.loadingApps
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => context.read<AppProvider>().loadApps(),
-              child: ListView.builder(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                itemCount: provider.apps.length,
-                itemBuilder: (context, index) {
-                  final app = provider.apps[index];
-                  return _AppTile(app: app);
-                },
-              ),
+      body: Column(
+        children: [
+          SizedBox(
+            height: 48,
+            child: ListView(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+              children: [
+                _chip('全部', 'all'),
+                _chip('应用程序', 'app'),
+                _chip('压缩包', 'archive'),
+                ...langList.take(8).map((l) => _chip(l, 'lang:$l')),
+              ],
             ),
+          ),
+          Expanded(
+            child: provider.loadingApps
+                ? const Center(child: CircularProgressIndicator())
+                : RefreshIndicator(
+                    onRefresh: () => context.read<AppProvider>().loadApps(),
+                    child: list.isEmpty
+                        ? ListView(
+                            children: const [
+                              SizedBox(height: 120),
+                              Center(child: Text('该分类下暂无内容')),
+                            ],
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            itemCount: list.length,
+                            itemBuilder: (context, index) {
+                              final app = list[index];
+                              return _AppTile(app: app);
+                            },
+                          ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _chip(String label, String value) {
+    final selected = _filter == value;
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: FilterChip(
+        label: Text(label),
+        selected: selected,
+        onSelected: (_) => setState(() => _filter = value),
+      ),
     );
   }
 }
@@ -97,10 +159,17 @@ class _AppTile extends StatelessWidget {
         children: [
           Text(app.developer, maxLines: 1, overflow: TextOverflow.ellipsis),
           const SizedBox(height: 2),
-          Row(
+          Wrap(
+            spacing: 6,
+            runSpacing: 2,
             children: [
-              Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade700),
-              Text(' ${app.rating.toStringAsFixed(1)}  ·  ${app.size}  ·  ${_formatDownloads(app.downloads)}'),
+              _miniTag(app.categoryLabel),
+              if (app.fileType != null) _miniTag(app.fileTypeLabel),
+              if (app.language != null) _miniTag(app.language!),
+              Text(
+                '${app.rating.toStringAsFixed(1)} ★ · ${app.size}',
+                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+              ),
             ],
           ),
         ],
@@ -111,7 +180,7 @@ class _AppTile extends StatelessWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
         },
-        child: const Text('安装'),
+        child: const Text('查看'),
       ),
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
@@ -119,9 +188,14 @@ class _AppTile extends StatelessWidget {
     );
   }
 
-  String _formatDownloads(int n) {
-    if (n >= 1000000) return '${(n / 1000000).toStringAsFixed(1)}M';
-    if (n >= 1000) return '${(n / 1000).toStringAsFixed(1)}K';
-    return '$n';
+  Widget _miniTag(String text) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+      decoration: BoxDecoration(
+        color: Colors.teal.withOpacity(0.15),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(text, style: const TextStyle(fontSize: 11)),
+    );
   }
 }

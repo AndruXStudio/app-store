@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/local_data_service.dart';
 
@@ -36,11 +37,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _openQQGroup() async {
-    // QQ 群号 1045956482
     final uri = Uri.parse(
       'mqqapi://card/show_pslcard?src_type=internal&version=1&card_type=group&source=external&uin=1045956482',
     );
-    final web = Uri.parse('https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&jump_from=webapi&authKey=&group_code=1045956482');
+    final web = Uri.parse(
+      'https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&jump_from=webapi&authKey=&group_code=1045956482',
+    );
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri);
@@ -75,30 +77,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         child: Column(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            ListTile(
-                              title: const Text('跟随系统'),
-                              onTap: () => Navigator.pop(ctx, 'system'),
-                            ),
-                            ListTile(
-                              title: const Text('浅色'),
-                              onTap: () => Navigator.pop(ctx, 'light'),
-                            ),
-                            ListTile(
-                              title: const Text('深色'),
-                              onTap: () => Navigator.pop(ctx, 'dark'),
-                            ),
+                            ListTile(title: const Text('跟随系统'), onTap: () => Navigator.pop(ctx, 'system')),
+                            ListTile(title: const Text('浅色'), onTap: () => Navigator.pop(ctx, 'light')),
+                            ListTile(title: const Text('深色'), onTap: () => Navigator.pop(ctx, 'dark')),
                           ],
                         ),
                       ),
                     );
-                    if (v != null) {
-                      await _update('darkMode', v);
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('主题将在下次启动时完整生效，部分页面已即时更新')),
-                        );
-                      }
-                    }
+                    if (v != null) await _update('darkMode', v);
                   },
                 ),
                 _section('下载'),
@@ -128,11 +114,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   leading: const Icon(Icons.tag_rounded),
                   title: const Text('复制群号'),
                   subtitle: const Text('1045956482'),
-                  onTap: () {
-                    // simple feedback
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('群号 1045956482（请手动复制）')),
-                    );
+                  onTap: () async {
+                    await Clipboard.setData(const ClipboardData(text: '1045956482'));
+                    if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('群号已复制')),
+                      );
+                    }
                   },
                 ),
                 _section('关于'),
@@ -145,18 +133,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       context: context,
                       applicationName: 'AnNexus',
                       applicationVersion: '1.0.0',
-                      applicationLegalese: '开源应用商店\n基于 Flutter · Supabase · GitHub\n包名 com.andrux.nexus',
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.code_rounded),
-                  title: const Text('开源仓库'),
-                  subtitle: const Text('github.com/AndruXStudio/app-store'),
-                  onTap: () {
-                    launchUrl(
-                      Uri.parse('https://github.com/AndruXStudio/app-store'),
-                      mode: LaunchMode.externalApplication,
+                      applicationLegalese:
+                          '开源应用商店\n基于 Flutter · Supabase · GitHub\n包名 com.andrux.nexus\n官方群：1045956482',
                     );
                   },
                 ),

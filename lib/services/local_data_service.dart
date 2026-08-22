@@ -33,6 +33,8 @@ class LocalDataService {
         'size': app.size,
         'downloadUrl': app.downloadUrl,
         'githubUrl': app.githubUrl,
+        'language': app.language,
+        'fileType': app.fileType,
       };
 
   AppModel _mapToApp(Map<String, dynamic> m) => AppModel(
@@ -48,6 +50,8 @@ class LocalDataService {
         size: m['size']?.toString() ?? '',
         downloadUrl: m['downloadUrl']?.toString() ?? '',
         githubUrl: m['githubUrl']?.toString(),
+        language: m['language']?.toString(),
+        fileType: m['fileType']?.toString(),
       );
 
   Future<List<AppModel>> getFavorites() async {
