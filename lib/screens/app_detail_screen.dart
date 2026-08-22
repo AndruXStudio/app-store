@@ -4,13 +4,43 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../models/app_model.dart';
 import '../services/download_service.dart';
+import '../services/local_data_service.dart';
 
-class AppDetailScreen extends StatelessWidget {
+class AppDetailScreen extends StatefulWidget {
   final AppModel app;
   const AppDetailScreen({super.key, required this.app});
 
   @override
+  State<AppDetailScreen> createState() => _AppDetailScreenState();
+}
+
+class _AppDetailScreenState extends State<AppDetailScreen> {
+  final _local = LocalDataService();
+  bool _isFav = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _local.addHistory(widget.app);
+    _local.isFavorite(widget.app.id).then((v) {
+      if (mounted) setState(() => _isFav = v);
+    });
+  }
+
+  Future<void> _toggleFav() async {
+    await _local.toggleFavorite(widget.app);
+    final v = await _local.isFavorite(widget.app.id);
+    if (mounted) {
+      setState(() => _isFav = v);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(v ? '已加入收藏' : '已取消收藏')),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final app = widget.app;
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final downloadService = context.watch<DownloadService>();
@@ -23,6 +53,13 @@ class AppDetailScreen extends StatelessWidget {
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
+            actions: [
+              IconButton(
+                icon: Icon(_isFav ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                    color: _isFav ? Colors.red : null),
+                onPressed: _toggleFav,
+              ),
+            ],
             flexibleSpace: FlexibleSpaceBar(
               background: Container(
                 color: colorScheme.primaryContainer,
@@ -34,7 +71,8 @@ class AppDetailScreen extends StatelessWidget {
                       width: 100,
                       height: 100,
                       fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => Icon(Icons.android_rounded, size: 80, color: colorScheme.primary),
+                      errorWidget: (_, __, ___) =>
+                          Icon(Icons.android_rounded, size: 80, color: colorScheme.primary),
                     ),
                   ),
                 ),
@@ -73,15 +111,19 @@ class AppDetailScreen extends StatelessWidget {
                         : isDownloading
                             ? FilledButton.icon(
                                 onPressed: null,
-                                icon: const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
+                                icon: const SizedBox(
+                                    width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2)),
                                 label: const Text('下载中...'),
                                 style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
                               )
                             : FilledButton.icon(
                                 onPressed: () {
-                                  if (app.downloadUrl.isEmpty || app.downloadUrl.contains('github.com') && !app.downloadUrl.contains('releases')) {
-                                    // Open github page
-                                    launchUrl(Uri.parse(app.githubUrl ?? app.downloadUrl), mode: LaunchMode.externalApplication);
+                                  if (app.downloadUrl.isEmpty ||
+                                      (app.downloadUrl.contains('github.com') &&
+                                          !app.downloadUrl.contains('releases') &&
+                                          !app.downloadUrl.contains('download'))) {
+                                    launchUrl(Uri.parse(app.githubUrl ?? app.downloadUrl),
+                                        mode: LaunchMode.externalApplication);
                                   } else {
                                     downloadService.startDownload(
                                       id: app.id,
@@ -104,7 +146,8 @@ class AppDetailScreen extends StatelessWidget {
                     SizedBox(
                       width: double.infinity,
                       child: OutlinedButton.icon(
-                        onPressed: () => launchUrl(Uri.parse(app.githubUrl!), mode: LaunchMode.externalApplication),
+                        onPressed: () =>
+                            launchUrl(Uri.parse(app.githubUrl!), mode: LaunchMode.externalApplication),
                         icon: const Icon(Icons.code_rounded),
                         label: const Text('在 GitHub 查看'),
                       ),
@@ -115,7 +158,8 @@ class AppDetailScreen extends StatelessWidget {
                   const SizedBox(height: 8),
                   Text(app.description, style: theme.textTheme.bodyMedium),
                   const SizedBox(height: 16),
-                  Text('版本 ${app.version}', style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
+                  Text('版本 ${app.version}',
+                      style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onSurfaceVariant)),
                   const SizedBox(height: 40),
                 ],
               ),

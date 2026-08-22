@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
 import 'downloads_screen.dart';
+import 'settings_screen.dart';
+import 'favorites_screen.dart';
+import 'history_screen.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -43,6 +47,24 @@ class _ProfileTabState extends State<ProfileTab> {
     }
   }
 
+  Future<void> _openQQGroup() async {
+    final uri = Uri.parse(
+      'mqqapi://card/show_pslcard?src_type=internal&version=1&card_type=group&source=external&uin=1045956482',
+    );
+    final web = Uri.parse(
+      'https://qm.qq.com/cgi-bin/qm/qr?_wv=1027&k=&jump_from=webapi&authKey=&group_code=1045956482',
+    );
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        await launchUrl(web, mode: LaunchMode.externalApplication);
+      }
+    } catch (_) {
+      await launchUrl(web, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -61,7 +83,11 @@ class _ProfileTabState extends State<ProfileTab> {
               child: _avatarUrl == null
                   ? Text(
                       _username.isNotEmpty ? _username[0].toUpperCase() : 'U',
-                      style: TextStyle(fontSize: 36, color: colorScheme.onPrimaryContainer, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 36,
+                        color: colorScheme.onPrimaryContainer,
+                        fontWeight: FontWeight.bold,
+                      ),
                     )
                   : null,
             ),
@@ -80,7 +106,21 @@ class _ProfileTabState extends State<ProfileTab> {
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ),
-          const SizedBox(height: 32),
+          const SizedBox(height: 20),
+          // 官方群
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: FilledButton.tonalIcon(
+              onPressed: _openQQGroup,
+              icon: const Icon(Icons.groups_rounded),
+              label: const Text('加入官方 QQ 群  1045956482'),
+              style: FilledButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
           _buildTile(
             context,
             icon: Icons.download_rounded,
@@ -94,7 +134,7 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.favorite_outline_rounded,
             title: '我的收藏',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('收藏功能开发中')));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
             },
           ),
           _buildTile(
@@ -102,7 +142,7 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.history_rounded,
             title: '浏览历史',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('历史功能开发中')));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
             },
           ),
           _buildTile(
@@ -110,7 +150,7 @@ class _ProfileTabState extends State<ProfileTab> {
             icon: Icons.settings_outlined,
             title: '设置',
             onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('设置功能开发中')));
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
             },
           ),
           _buildTile(
@@ -122,7 +162,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 context: context,
                 applicationName: 'AnNexus',
                 applicationVersion: '1.0.0',
-                applicationLegalese: '基于 GitHub 的开源应用商店\nPowered by Flutter & Supabase',
+                applicationLegalese: '基于 GitHub 的开源应用商店\nPowered by Flutter & Supabase\n官方群：1045956482',
               );
             },
           ),
@@ -146,7 +186,8 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  Widget _buildTile(BuildContext context, {required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildTile(BuildContext context,
+      {required IconData icon, required String title, required VoidCallback onTap}) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
