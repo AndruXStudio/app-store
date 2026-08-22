@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import 'main_shell.dart';
 
@@ -49,16 +48,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
           (_) => false,
         );
       }
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red.shade700),
-        );
-      }
     } catch (e) {
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('注册失败: $e'), backgroundColor: Colors.red.shade700),
+          SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
         );
       }
     } finally {
@@ -72,10 +66,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('注册'),
-        centerTitle: true,
-      ),
+      appBar: AppBar(title: const Text('注册'), centerTitle: true),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -107,7 +98,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             prefixIcon: const Icon(Icons.person_outline_rounded),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          validator: (v) => (v == null || v.trim().length < 3) ? '用户名至少3位' : null,
+                          validator: (v) => (v == null || v.trim().length < 2) ? '用户名至少2位' : null,
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),
@@ -139,7 +130,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             ),
                             border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                           ),
-                          validator: (v) => (v == null || v.length < 6) ? '密码至少6位' : null,
+                          validator: (v) => (v == null || v.length < 4) ? '密码至少4位' : null,
                           textInputAction: TextInputAction.next,
                         ),
                         const SizedBox(height: 16),

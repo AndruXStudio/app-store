@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'config/supabase_config.dart';
 import 'providers/app_provider.dart';
 import 'services/download_service.dart';
+import 'services/auth_service.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 
@@ -39,7 +40,7 @@ class MyApp extends StatelessWidget {
         theme: ThemeData(
           useMaterial3: true,
           colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF01875F), // Google Play green-ish
+            seedColor: const Color(0xFF01875F),
             brightness: Brightness.light,
           ),
           appBarTheme: const AppBarTheme(
@@ -78,15 +79,40 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class AuthGate extends StatelessWidget {
+class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final session = Supabase.instance.client.auth.currentSession;
-    if (session != null) {
-      return const MainShell();
+  State<AuthGate> createState() => _AuthGateState();
+}
+
+class _AuthGateState extends State<AuthGate> {
+  bool _loading = true;
+  bool _loggedIn = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _check();
+  }
+
+  Future<void> _check() async {
+    final loggedIn = await AuthService().isLoggedIn;
+    if (mounted) {
+      setState(() {
+        _loggedIn = loggedIn;
+        _loading = false;
+      });
     }
-    return const LoginScreen();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+    return _loggedIn ? const MainShell() : const LoginScreen();
   }
 }

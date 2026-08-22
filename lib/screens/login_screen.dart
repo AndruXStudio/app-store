@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'main_shell.dart';
@@ -54,10 +53,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
         emailOrUsername: _usernameController.text.trim(),
         password: _passwordController.text,
       );
-      // Success animation
-      setState(() {
-        _showSuccess = true;
-      });
+      setState(() => _showSuccess = true);
       await _animController.forward();
       await Future.delayed(const Duration(milliseconds: 600));
       if (mounted) {
@@ -65,18 +61,12 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
           MaterialPageRoute(builder: (_) => const MainShell()),
         );
       }
-    } on AuthException catch (e) {
-      setState(() => _isLoading = false);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red.shade700),
-        );
-      }
     } catch (e) {
       setState(() => _isLoading = false);
       if (mounted) {
+        final msg = e.toString().replaceFirst('Exception: ', '');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('登录失败: $e'), backgroundColor: Colors.red.shade700),
+          SnackBar(content: Text(msg), backgroundColor: Colors.red.shade700),
         );
       }
     }
@@ -195,7 +185,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
                 ),
-                validator: (v) => (v == null || v.length < 6) ? '密码至少6位' : null,
+                validator: (v) => (v == null || v.isEmpty) ? '请输入密码' : null,
                 onFieldSubmitted: (_) => _login(),
               ),
               const SizedBox(height: 24),
