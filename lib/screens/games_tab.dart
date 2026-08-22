@@ -1,0 +1,131 @@
+import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import '../providers/app_provider.dart';
+import '../models/app_model.dart';
+import 'app_detail_screen.dart';
+import 'search_screen.dart';
+import 'downloads_screen.dart';
+import '../services/download_service.dart';
+
+class GamesTab extends StatefulWidget {
+  const GamesTab({super.key});
+
+  @override
+  State<GamesTab> createState() => _GamesTabState();
+}
+
+class _GamesTabState extends State<GamesTab> {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      context.read<AppProvider>().loadGames();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final provider = context.watch<AppProvider>();
+    final downloadService = context.watch<DownloadService>();
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('游戏'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.search_rounded),
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
+            },
+          ),
+          Badge(
+            isLabelVisible: downloadService.activeTasks.isNotEmpty,
+            label: Text('${downloadService.activeTasks.length}'),
+            child: IconButton(
+              icon: const Icon(Icons.download_rounded),
+              onPressed: () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+              },
+            ),
+          ),
+        ],
+      ),
+      body: provider.loadingGames
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () => context.read<AppProvider>().loadGames(),
+              child: GridView.builder(
+                padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                itemCount: provider.games.length,
+                itemBuilder: (context, index) {
+                  final app = provider.games[index];
+                  return _GameCard(app: app);
+                },
+              ),
+            ),
+    );
+  }
+}
+
+class _GameCard extends StatelessWidget {
+  final AppModel app;
+  const _GameCard({required this.app});
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
+        },
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Container(
+                width: double.infinity,
+                color: colorScheme.surfaceContainerHighest,
+                child: CachedNetworkImage(
+                  imageUrl: app.iconUrl,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => Icon(Icons.sports_esports_rounded, size: 48, color: colorScheme.primary),
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  const SizedBox(height: 2),
+                  Text(app.developer, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade700),
+                      Text(' ${app.rating.toStringAsFixed(1)}', style: const TextStyle(fontSize: 12)),
+                      const Spacer(),
+                      Text(app.size, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
