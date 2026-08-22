@@ -100,7 +100,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   Icon(Icons.storefront_rounded, size: 72, color: colorScheme.primary),
                   const SizedBox(height: 12),
                   Text(
-                    'App Store',
+                    'AnNexus',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: colorScheme.primary,

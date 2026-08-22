@@ -11,14 +11,34 @@ class AuthService {
   Future<UserModel?> getCurrentUserModel() async {
     final user = currentUser;
     if (user == null) return null;
+
+    // Try load profile from public.users
+    String username = user.userMetadata?['username']?.toString() ??
+        user.email?.split('@').first ??
+        'User';
+    String? avatarUrl = user.userMetadata?['avatar_url']?.toString();
+
+    try {
+      final row = await _client
+          .from('users')
+          .select('username, avatar_url, email')
+          .eq('id', user.id)
+          .maybeSingle();
+      if (row != null) {
+        username = row['username']?.toString() ?? username;
+        avatarUrl = row['avatar_url']?.toString() ?? avatarUrl;
+      }
+    } catch (_) {}
+
     return UserModel(
       id: user.id,
-      username: user.userMetadata?['username'] ?? user.email?.split('@').first ?? 'User',
+      username: username,
       email: user.email,
-      avatarUrl: user.userMetadata?['avatar_url'],
+      avatarUrl: avatarUrl,
     );
   }
 
+  /// Register with username + email + password
   Future<AuthResponse> signUp({
     required String username,
     required String email,
@@ -29,32 +49,53 @@ class AuthService {
       password: password,
       data: {'username': username},
     );
+
+    // Upsert profile into public.users if table exists
+    final user = response.user;
+    if (user != null) {
+      try {
+        await _client.from('users').upsert({
+          'id': user.id,
+          'username': username,
+          'email': email,
+        });
+      } catch (_) {
+        // table may have different columns; ignore
+      }
+    }
     return response;
   }
 
+  /// Login with email OR username
   Future<AuthResponse> signIn({
     required String emailOrUsername,
     required String password,
   }) async {
-    // Try email first, if it looks like email
-    String email = emailOrUsername;
-    if (!emailOrUsername.contains('@')) {
-      // Assume username, try to find email from profiles or just use as is
-      // For simplicity, treat as email if no @, user may register with username as email prefix
-      email = '$emailOrUsername@appstore.local';
+    String email = emailOrUsername.trim();
+
+    // If looks like username (no @), try resolve email from public.users
+    if (!email.contains('@')) {
+      try {
+        final row = await _client
+            .from('users')
+            .select('email')
+            .eq('username', email)
+            .maybeSingle();
+        if (row != null && row['email'] != null) {
+          email = row['email'].toString();
+        } else {
+          // fallback: common patterns people use
+          // keep original and let auth fail with clear message
+        }
+      } catch (_) {
+        // users table query failed (RLS / no table) — try as email anyway
+      }
     }
-    try {
-      return await _client.auth.signInWithPassword(
-        email: emailOrUsername.contains('@') ? emailOrUsername : email,
-        password: password,
-      );
-    } catch (_) {
-      // Fallback: try original
-      return await _client.auth.signInWithPassword(
-        email: emailOrUsername,
-        password: password,
-      );
-    }
+
+    return await _client.auth.signInWithPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> signOut() async {

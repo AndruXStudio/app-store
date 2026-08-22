@@ -1,4 +1,4 @@
-package com.appstore.app_store
+package com.andrux.nexus
 
 import io.flutter.embedding.android.FlutterActivity
 

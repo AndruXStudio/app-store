@@ -120,7 +120,7 @@ class _ProfileTabState extends State<ProfileTab> {
             onTap: () {
               showAboutDialog(
                 context: context,
-                applicationName: 'App Store',
+                applicationName: 'AnNexus',
                 applicationVersion: '1.0.0',
                 applicationLegalese: '基于 GitHub 的开源应用商店\nPowered by Flutter & Supabase',
               );

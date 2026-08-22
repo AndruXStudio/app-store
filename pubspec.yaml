@@ -1,5 +1,5 @@
-name: app_store
-description: "A Google Play-like App Store built with Flutter & Material 3"
+name: annexus
+description: "AnNexus - Open Source App Store"
 publish_to: 'none'
 version: 1.0.0+1
 

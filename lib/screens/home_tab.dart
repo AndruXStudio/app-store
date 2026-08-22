@@ -38,7 +38,7 @@ class _HomeTabState extends State<HomeTab> {
             SliverAppBar(
               floating: true,
               snap: true,
-              title: const Text('App Store'),
+              title: const Text('AnNexus'),
               actions: [
                 Badge(
                   isLabelVisible: downloadService.activeTasks.isNotEmpty,

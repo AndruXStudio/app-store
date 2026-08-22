@@ -34,7 +34,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => DownloadService()),
       ],
       child: MaterialApp(
-        title: 'App Store',
+        title: 'AnNexus',
         debugShowCheckedModeBanner: false,
         theme: ThemeData(
           useMaterial3: true,

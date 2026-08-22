@@ -1,6 +1,6 @@
 {
-    "name": "app_store",
-    "short_name": "app_store",
+    "name": "AnNexus",
+    "short_name": "AnNexus",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
