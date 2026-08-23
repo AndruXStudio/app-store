@@ -98,7 +98,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    '发现优质开源应用',
+                    '发现与分享优质应用',
                     style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 40),

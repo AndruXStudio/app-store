@@ -14,7 +14,7 @@ class AppProvider extends ChangeNotifier {
   bool _loadingGames = false;
   bool _loadingSearch = false;
   String _searchQuery = '';
-  String _source = 'all'; // all | fdroid | github
+  String _source = 'catalog';
 
   List<AppModel> get featured => _featured;
   List<AppModel> get apps => _apps;
@@ -28,20 +28,15 @@ class AppProvider extends ChangeNotifier {
   String get source => _source;
 
   Future<void> setSource(String source) async {
-    if (_source == source) return;
-    _source = source;
-    _featured = [];
-    _apps = [];
-    _games = [];
-    notifyListeners();
-    await Future.wait([loadFeatured(), loadApps(), loadGames()]);
+    _source = 'catalog';
+    await refreshAll();
   }
 
   Future<void> loadFeatured() async {
     if (_featured.isNotEmpty) return;
     _loadingFeatured = true;
     notifyListeners();
-    _featured = await _api.featured(source: _source);
+    _featured = await _api.featured();
     _loadingFeatured = false;
     notifyListeners();
   }
@@ -49,18 +44,15 @@ class AppProvider extends ChangeNotifier {
   Future<void> loadApps() async {
     _loadingApps = true;
     notifyListeners();
-    _apps = await _api.featured(source: _source);
-    // 只保留 apk
-    _apps = _apps.where((a) => a.fileType == 'apk' || a.fileType == null).toList();
+    _apps = await _api.featured();
     _loadingApps = false;
     notifyListeners();
   }
 
   Future<void> loadGames() async {
-    if (_games.isNotEmpty) return;
     _loadingGames = true;
     notifyListeners();
-    _games = await _api.games(source: _source);
+    _games = await _api.games();
     _loadingGames = false;
     notifyListeners();
   }
@@ -74,7 +66,7 @@ class AppProvider extends ChangeNotifier {
     }
     _loadingSearch = true;
     notifyListeners();
-    _searchResults = await _api.search(query, source: _source);
+    _searchResults = await _api.search(query);
     _loadingSearch = false;
     notifyListeners();
   }

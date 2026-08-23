@@ -134,7 +134,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       applicationName: 'AnNexus',
                       applicationVersion: '1.0.0',
                       applicationLegalese:
-                          '开源应用商店\n基于 Flutter · Supabase · GitHub\n包名 com.andrux.nexus\n官方群：1045956482',
+                          '应用商店\n基于 Flutter · Supabase · GitHub\n包名 com.andrux.nexus\n官方群：1045956482',
                     );
                   },
                 ),

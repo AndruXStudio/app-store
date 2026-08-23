@@ -7,6 +7,7 @@ import 'app_detail_screen.dart';
 import 'search_screen.dart';
 import 'downloads_screen.dart';
 import '../services/download_service.dart';
+import '../widgets/role_chip.dart';
 
 class AppsTab extends StatefulWidget {
   const AppsTab({super.key});
@@ -52,74 +53,25 @@ class _AppsTabState extends State<AppsTab> {
           ),
         ],
       ),
-      body: Column(
-        children: [
-          SizedBox(
-            height: 48,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-              children: [
-                _sourceChip(provider, '全部', 'all'),
-                _sourceChip(provider, '信任库', 'catalog'),
-                _sourceChip(provider, 'F-Droid', 'fdroid'),
-                _sourceChip(provider, 'GitHub', 'github'),
-              ],
+      body: provider.loadingApps
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: () => context.read<AppProvider>().refreshAll(),
+              child: list.isEmpty
+                  ? ListView(
+                      children: const [
+                        SizedBox(height: 120),
+                        Center(child: Text('暂无已上架应用')),
+                        SizedBox(height: 8),
+                        Center(child: Text('去「我的 → 发布应用」提交，审核通过后显示')),
+                      ],
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      itemCount: list.length,
+                      itemBuilder: (context, index) => _AppTile(app: list[index]),
+                    ),
             ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                '信任库 = 你在 Supabase 上架的 APK；其它源为公开开源站',
-                style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
-              ),
-            ),
-          ),
-          Expanded(
-            child: provider.loadingApps
-                ? const Center(child: CircularProgressIndicator())
-                : RefreshIndicator(
-                    onRefresh: () => context.read<AppProvider>().refreshAll(),
-                    child: list.isEmpty
-                        ? ListView(
-                            children: const [
-                              SizedBox(height: 100),
-                              Center(child: Text('暂无应用')),
-                              SizedBox(height: 8),
-                              Center(
-                                child: Padding(
-                                  padding: EdgeInsets.symmetric(horizontal: 32),
-                                  child: Text(
-                                    '信任库为空时，请在 Supabase 的 apps 表插入数据',
-                                    textAlign: TextAlign.center,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          )
-                        : ListView.builder(
-                            padding: const EdgeInsets.symmetric(vertical: 8),
-                            itemCount: list.length,
-                            itemBuilder: (context, index) => _AppTile(app: list[index]),
-                          ),
-                  ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _sourceChip(AppProvider provider, String label, String value) {
-    final selected = provider.source == value;
-    return Padding(
-      padding: const EdgeInsets.only(right: 8),
-      child: FilterChip(
-        label: Text(label),
-        selected: selected,
-        onSelected: (_) => provider.setSource(value),
-      ),
     );
   }
 }
@@ -130,12 +82,6 @@ class _AppTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    String src = switch (app.source) {
-      'catalog' => '信任库',
-      'fdroid' => 'F-Droid',
-      'github' => 'GitHub',
-      _ => app.source ?? '',
-    };
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: ClipRRect(
@@ -158,12 +104,11 @@ class _AppTile extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(app.developer, maxLines: 1, overflow: TextOverflow.ellipsis),
-          const SizedBox(height: 2),
-          Wrap(
-            spacing: 6,
+          const SizedBox(height: 4),
+          Row(
             children: [
-              if (src.isNotEmpty) _tag(src),
-              _tag('APK'),
+              if (app.submitterRole != null) RoleChip(role: app.submitterRole!),
+              const SizedBox(width: 6),
               Text('${app.version} · ${app.size}',
                   style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant)),
             ],
@@ -176,22 +121,11 @@ class _AppTile extends StatelessWidget {
         onPressed: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
         },
-        child: const Text('下载'),
+        child: const Text('查看'),
       ),
       onTap: () {
         Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
       },
-    );
-  }
-
-  Widget _tag(String text) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-      decoration: BoxDecoration(
-        color: Colors.teal.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(text, style: const TextStyle(fontSize: 11)),
     );
   }
 }

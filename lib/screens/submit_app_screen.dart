@@ -1,5 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
-import '../services/catalog_service.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/auth_service.dart';
+import '../services/community_service.dart';
 
 class SubmitAppScreen extends StatefulWidget {
   const SubmitAppScreen({super.key});
@@ -9,18 +13,22 @@ class SubmitAppScreen extends StatefulWidget {
 }
 
 class _SubmitAppScreenState extends State<SubmitAppScreen> {
-  final _formKey = GlobalKey<FormState>();
+  final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _pkg = TextEditingController();
   final _dev = TextEditingController();
   final _desc = TextEditingController();
-  final _icon = TextEditingController();
-  final _version = TextEditingController(text: '1.0.0');
-  final _size = TextEditingController();
   final _url = TextEditingController();
-  String _category = 'app';
+  final _ver = TextEditingController(text: '1.0.0');
+  final _size = TextEditingController();
+  final _icon = TextEditingController();
+  final _log = TextEditingController();
+  String _cat = 'app';
   bool _loading = false;
-  final _catalog = CatalogService();
+  String? _pickedName;
+  File? _apkFile;
+  final _auth = AuthService();
+  final _com = CommunityService();
 
   @override
   void dispose() {
@@ -28,38 +36,110 @@ class _SubmitAppScreenState extends State<SubmitAppScreen> {
     _pkg.dispose();
     _dev.dispose();
     _desc.dispose();
-    _icon.dispose();
-    _version.dispose();
-    _size.dispose();
     _url.dispose();
+    _ver.dispose();
+    _size.dispose();
+    _icon.dispose();
+    _log.dispose();
     super.dispose();
   }
 
+  Future<void> _pickApk() async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['apk'],
+      withData: false,
+    );
+    if (result == null || result.files.isEmpty) return;
+    final f = result.files.single;
+    if (f.path == null) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('无法读取文件路径')),
+        );
+      }
+      return;
+    }
+    setState(() {
+      _apkFile = File(f.path!);
+      _pickedName = f.name;
+      final bytes = f.size;
+      if (bytes > 0) {
+        if (bytes < 1024 * 1024) {
+          _size.text = '${(bytes / 1024).toStringAsFixed(0)} KB';
+        } else {
+          _size.text = '${(bytes / (1024 * 1024)).toStringAsFixed(1)} MB';
+        }
+      }
+      if (_name.text.trim().isEmpty) {
+        _name.text = f.name.replaceAll(RegExp(r'\.apk$', caseSensitive: false), '');
+      }
+    });
+  }
+
+  Future<String?> _uploadApk(String username) async {
+    if (_apkFile == null) return null;
+    final client = Supabase.instance.client;
+    final ts = DateTime.now().millisecondsSinceEpoch;
+    final safeName = (_pickedName ?? 'app.apk').replaceAll(RegExp(r'[^\w\.\-]'), '_');
+    final path = 'apks/$username/${ts}_$safeName';
+    final bytes = await _apkFile!.readAsBytes();
+    await client.storage.from('apps').uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(contentType: 'application/vnd.android.package-archive', upsert: true),
+        );
+    final publicUrl = client.storage.from('apps').getPublicUrl(path);
+    return publicUrl;
+  }
+
   Future<void> _submit() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (!_form.currentState!.validate()) return;
+    if (_apkFile == null && _url.text.trim().isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('请选择本地 APK 或填写下载链接')),
+      );
+      return;
+    }
     setState(() => _loading = true);
     try {
-      await _catalog.submitApp(
+      final user = await _auth.getCurrentUserModel();
+      if (user == null) throw Exception('请先登录');
+      final role = await _com.getUserRole(user.username);
+
+      String downloadUrl = _url.text.trim();
+      if (_apkFile != null) {
+        final uploaded = await _uploadApk(user.username);
+        if (uploaded == null || uploaded.isEmpty) {
+          throw Exception('APK 上传失败，请检查 Storage 桶 apps 是否已创建并公开');
+        }
+        downloadUrl = uploaded;
+      }
+
+      await _com.submitApp(
         name: _name.text.trim(),
-        packageName: _pkg.text.trim().isEmpty ? null : _pkg.text.trim(),
-        developer: _dev.text.trim().isEmpty ? null : _dev.text.trim(),
+        packageName: _pkg.text.trim(),
+        developer: _dev.text.trim().isEmpty ? user.username : _dev.text.trim(),
         description: _desc.text.trim(),
-        iconUrl: _icon.text.trim().isEmpty ? null : _icon.text.trim(),
-        version: _version.text.trim(),
+        downloadUrl: downloadUrl,
+        version: _ver.text.trim(),
         sizeLabel: _size.text.trim(),
-        downloadUrl: _url.text.trim(),
-        category: _category,
+        submitterUsername: user.username,
+        submitterRole: role,
+        iconUrl: _icon.text.trim().isEmpty ? null : _icon.text.trim(),
+        category: _cat,
+        changelog: _log.text.trim().isEmpty ? null : _log.text.trim(),
       );
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('已提交，等待管理员/开发者审核'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('已提交，等待审核通过后上架')),
         );
         Navigator.pop(context);
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('提交失败: $e'), backgroundColor: Colors.red.shade700),
+          SnackBar(content: Text('$e'), backgroundColor: Colors.red.shade700),
         );
       }
     } finally {
@@ -70,50 +150,63 @@ class _SubmitAppScreenState extends State<SubmitAppScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('投稿应用')),
+      appBar: AppBar(title: const Text('发布应用')),
       body: Form(
-        key: _formKey,
+        key: _form,
         child: ListView(
           padding: const EdgeInsets.all(16),
           children: [
-            Text('提交后需审核通过才会上架', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text(
+              '支持本地选择 APK 上传，或填写直链。提交后需审核通过才会显示。',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
+            ),
             const SizedBox(height: 16),
-            TextFormField(
-              controller: _name,
-              decoration: const InputDecoration(labelText: '应用名称 *', border: OutlineInputBorder()),
-              validator: (v) => (v == null || v.trim().isEmpty) ? '必填' : null,
+            OutlinedButton.icon(
+              onPressed: _loading ? null : _pickApk,
+              icon: const Icon(Icons.android_rounded),
+              label: Text(_pickedName == null ? '从本机选择 APK' : '已选：$_pickedName'),
+              style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14)),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _url,
-              decoration: const InputDecoration(labelText: 'APK 直链 *', border: OutlineInputBorder()),
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) return '必填';
-                if (!v.startsWith('http')) return '需要 http(s) 链接';
-                return null;
-              },
+              decoration: const InputDecoration(
+                labelText: '或填写 APK 直链（可选）',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _name,
+              decoration: const InputDecoration(labelText: '应用名称 *', border: OutlineInputBorder()),
+              validator: (v) => v == null || v.trim().isEmpty ? '必填' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _pkg,
-              decoration: const InputDecoration(labelText: '包名', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: '包名 *',
+                hintText: 'com.example.app',
+                border: OutlineInputBorder(),
+              ),
+              validator: (v) => v == null || v.trim().isEmpty ? '必填' : null,
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _dev,
-              decoration: const InputDecoration(labelText: '开发者/发布者', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: '发布者（可留空）', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _icon,
-              decoration: const InputDecoration(labelText: '图标 URL', border: OutlineInputBorder()),
+              decoration: const InputDecoration(labelText: '图标 URL（可选）', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 12),
             Row(
               children: [
                 Expanded(
                   child: TextFormField(
-                    controller: _version,
+                    controller: _ver,
                     decoration: const InputDecoration(labelText: '版本', border: OutlineInputBorder()),
                   ),
                 ),
@@ -128,19 +221,25 @@ class _SubmitAppScreenState extends State<SubmitAppScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _category,
+              value: _cat,
               decoration: const InputDecoration(labelText: '分类', border: OutlineInputBorder()),
               items: const [
                 DropdownMenuItem(value: 'app', child: Text('应用')),
                 DropdownMenuItem(value: 'game', child: Text('游戏')),
               ],
-              onChanged: (v) => setState(() => _category = v ?? 'app'),
+              onChanged: (v) => setState(() => _cat = v ?? 'app'),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _desc,
-              maxLines: 4,
+              maxLines: 3,
               decoration: const InputDecoration(labelText: '简介', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextFormField(
+              controller: _log,
+              maxLines: 2,
+              decoration: const InputDecoration(labelText: '版本说明', border: OutlineInputBorder()),
             ),
             const SizedBox(height: 24),
             FilledButton(
