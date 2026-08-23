@@ -17,7 +17,12 @@ class AppModel {
   final String? language; // 主要编程语言
   final String? fileType; // apk | zip | aab | tar | rar | 7z | ipa | other
   final List<Map<String, dynamic>> assets;
-  final String? source; // fdroid | github | apkpure // 可下载资源列表
+  final String? source;
+  final String? submitterRole;
+  final String? submitterUsername;
+  final int? catalogId;
+  final String? status;
+  final String? changelog;
 
   AppModel({
     required this.id,
@@ -39,6 +44,11 @@ class AppModel {
     this.fileType,
     this.assets = const [],
     this.source,
+    this.submitterRole,
+    this.submitterUsername,
+    this.catalogId,
+    this.status,
+    this.changelog,
   });
 
   factory AppModel.fromGithubRelease(Map<String, dynamic> repo, Map<String, dynamic>? release) {

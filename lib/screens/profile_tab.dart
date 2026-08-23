@@ -1,11 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
+import '../services/community_service.dart';
 import 'login_screen.dart';
 import 'downloads_screen.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
+import 'submit_app_screen.dart';
+import 'admin_panel_screen.dart';
+import 'my_posts_screen.dart';
+import 'user_profile_screen.dart';
+import '../widgets/role_chip.dart';
 
 class ProfileTab extends StatefulWidget {
   const ProfileTab({super.key});
@@ -16,9 +22,11 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   final _auth = AuthService();
+  final _com = CommunityService();
   String _username = 'User';
   String? _email;
   String? _avatarUrl;
+  String _role = 'user';
 
   @override
   void initState() {
@@ -29,10 +37,13 @@ class _ProfileTabState extends State<ProfileTab> {
   Future<void> _loadUser() async {
     final user = await _auth.getCurrentUserModel();
     if (user != null && mounted) {
+      final role = await _com.getUserRole(user.username);
+      final profile = await _com.getProfile(user.username);
       setState(() {
-        _username = user.username;
+        _username = profile?['display_name']?.toString() ?? user.username;
         _email = user.email;
-        _avatarUrl = user.avatarUrl;
+        _avatarUrl = profile?['avatar_url']?.toString() ?? user.avatarUrl;
+        _role = role;
       });
     }
   }
@@ -64,6 +75,8 @@ class _ProfileTabState extends State<ProfileTab> {
       await launchUrl(web, mode: LaunchMode.externalApplication);
     }
   }
+
+  bool get _isStaff => _role == 'admin' || _role == 'creator' || _role == 'developer';
 
   @override
   Widget build(BuildContext context) {
@@ -99,6 +112,8 @@ class _ProfileTabState extends State<ProfileTab> {
               style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
             ),
           ),
+          const SizedBox(height: 6),
+          Center(child: RoleChip(role: _role)),
           if (_email != null)
             Center(
               child: Text(
@@ -106,8 +121,7 @@ class _ProfileTabState extends State<ProfileTab> {
                 style: theme.textTheme.bodyMedium?.copyWith(color: colorScheme.onSurfaceVariant),
               ),
             ),
-          const SizedBox(height: 20),
-          // 官方群
+          const SizedBox(height: 16),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: FilledButton.tonalIcon(
@@ -120,53 +134,33 @@ class _ProfileTabState extends State<ProfileTab> {
               ),
             ),
           ),
+          const SizedBox(height: 8),
+          _tile(Icons.person_rounded, '我的主页', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const UserProfileScreen()));
+          }),
+          _tile(Icons.upload_rounded, '提交应用', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SubmitAppScreen()));
+          }),
+          _tile(Icons.article_outlined, '帖子管理', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const MyPostsScreen()));
+          }),
+          if (_isStaff)
+            _tile(Icons.admin_panel_settings_rounded, '审核管理', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPanelScreen()));
+            }),
+          _tile(Icons.download_rounded, '下载管理', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+          }),
+          _tile(Icons.favorite_outline_rounded, '我的收藏', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
+          }),
+          _tile(Icons.history_rounded, '浏览历史', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
+          }),
+          _tile(Icons.settings_outlined, '设置', () {
+            Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
+          }),
           const SizedBox(height: 16),
-          _buildTile(
-            context,
-            icon: Icons.download_rounded,
-            title: '下载管理',
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
-            },
-          ),
-          _buildTile(
-            context,
-            icon: Icons.favorite_outline_rounded,
-            title: '我的收藏',
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const FavoritesScreen()));
-            },
-          ),
-          _buildTile(
-            context,
-            icon: Icons.history_rounded,
-            title: '浏览历史',
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const HistoryScreen()));
-            },
-          ),
-          _buildTile(
-            context,
-            icon: Icons.settings_outlined,
-            title: '设置',
-            onTap: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
-            },
-          ),
-          _buildTile(
-            context,
-            icon: Icons.info_outline_rounded,
-            title: '关于',
-            onTap: () {
-              showAboutDialog(
-                context: context,
-                applicationName: 'AnNexus',
-                applicationVersion: '1.0.0',
-                applicationLegalese: '基于 GitHub 的开源应用商店\nPowered by Flutter & Supabase\n官方群：1045956482',
-              );
-            },
-          ),
-          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: OutlinedButton.icon(
@@ -186,8 +180,7 @@ class _ProfileTabState extends State<ProfileTab> {
     );
   }
 
-  Widget _buildTile(BuildContext context,
-      {required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _tile(IconData icon, String title, VoidCallback onTap) {
     return ListTile(
       leading: Icon(icon),
       title: Text(title),
