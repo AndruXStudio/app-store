@@ -6,30 +6,30 @@ class RoleChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final r = role.toLowerCase();
+    late Color bg;
+    late Color fg;
     late String label;
-    late Color color;
-    if (r == 'creator') {
-      label = '创建者';
-      color = Colors.purple;
-    } else if (r == 'admin') {
-      label = '管理员';
-      color = Colors.orange;
-    } else if (r == 'developer') {
-      label = '开发者';
-      color = Colors.blue;
-    } else {
-      label = '用户';
-      color = Colors.grey;
+    switch (role) {
+      case 'creator':
+        bg = Colors.deepPurple.shade100;
+        fg = Colors.deepPurple.shade800;
+        label = '创建者';
+        break;
+      case 'admin':
+        bg = Colors.orange.shade100;
+        fg = Colors.orange.shade900;
+        label = '管理员';
+        break;
+      default:
+        bg = Colors.blueGrey.shade100;
+        fg = Colors.blueGrey.shade800;
+        label = '用户';
     }
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.15),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withOpacity(0.5)),
-      ),
-      child: Text(label, style: TextStyle(fontSize: 11, color: color, fontWeight: FontWeight.w600)),
+    return Chip(
+      label: Text(label, style: TextStyle(color: fg, fontWeight: FontWeight.w600, fontSize: 12)),
+      backgroundColor: bg,
+      visualDensity: VisualDensity.compact,
+      padding: EdgeInsets.zero,
     );
   }
 }

@@ -42,7 +42,7 @@ class ApkSourceService {
     final results = <AppModel>[];
     if (source == 'all' || source == 'catalog') {
       try {
-        results.addAll(await _catalog.fetchAll());
+        results.addAll(await _catalog.fetchPublished());
       } catch (_) {}
     }
     if (source == 'all' || source == 'fdroid') {
@@ -63,7 +63,7 @@ class ApkSourceService {
     final results = <AppModel>[];
     if (source == 'all' || source == 'catalog') {
       try {
-        results.addAll(await _catalog.fetchAll(category: 'game'));
+        results.addAll(await _catalog.fetchPublished(category: 'game'));
       } catch (_) {}
     }
     if (source == 'all' || source == 'fdroid') {

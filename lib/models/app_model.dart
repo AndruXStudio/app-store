@@ -20,7 +20,9 @@ class AppModel {
   final String? source;
   final String? submitterRole;
   final String? submitterUsername;
+  final String? publisherRole;
   final int? catalogId;
+  final String? submitterId;
   final String? status;
   final String? changelog;
 
@@ -46,7 +48,9 @@ class AppModel {
     this.source,
     this.submitterRole,
     this.submitterUsername,
+    this.publisherRole,
     this.catalogId,
+    this.submitterId,
     this.status,
     this.changelog,
   });

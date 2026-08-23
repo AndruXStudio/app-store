@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../services/auth_service.dart';
-import '../services/community_service.dart';
+import '../services/catalog_service.dart';
 import 'login_screen.dart';
 import 'downloads_screen.dart';
 import 'settings_screen.dart';
 import 'favorites_screen.dart';
 import 'history_screen.dart';
 import 'submit_app_screen.dart';
-import 'admin_panel_screen.dart';
-import 'my_posts_screen.dart';
+import 'admin_review_screen.dart';
 import 'user_profile_screen.dart';
 import '../widgets/role_chip.dart';
 
@@ -22,11 +21,12 @@ class ProfileTab extends StatefulWidget {
 
 class _ProfileTabState extends State<ProfileTab> {
   final _auth = AuthService();
-  final _com = CommunityService();
+  final _catalog = CatalogService();
   String _username = 'User';
   String? _email;
   String? _avatarUrl;
   String _role = 'user';
+  bool _isStaff = false;
 
   @override
   void initState() {
@@ -36,14 +36,14 @@ class _ProfileTabState extends State<ProfileTab> {
 
   Future<void> _loadUser() async {
     final user = await _auth.getCurrentUserModel();
+    final role = await _catalog.getMyRole();
     if (user != null && mounted) {
-      final role = await _com.getUserRole(user.username);
-      final profile = await _com.getProfile(user.username);
       setState(() {
-        _username = profile?['display_name']?.toString() ?? user.username;
+        _username = user.username;
         _email = user.email;
-        _avatarUrl = profile?['avatar_url']?.toString() ?? user.avatarUrl;
+        _avatarUrl = user.avatarUrl;
         _role = role;
+        _isStaff = role == 'admin' || role == 'creator';
       });
     }
   }
@@ -75,8 +75,6 @@ class _ProfileTabState extends State<ProfileTab> {
       await launchUrl(web, mode: LaunchMode.externalApplication);
     }
   }
-
-  bool get _isStaff => _role == 'admin' || _role == 'creator' || _role == 'developer';
 
   @override
   Widget build(BuildContext context) {
@@ -138,15 +136,12 @@ class _ProfileTabState extends State<ProfileTab> {
           _tile(Icons.person_rounded, '我的主页', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const UserProfileScreen()));
           }),
-          _tile(Icons.upload_rounded, '提交应用', () {
+          _tile(Icons.upload_rounded, '投稿应用', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SubmitAppScreen()));
           }),
-          _tile(Icons.article_outlined, '帖子管理', () {
-            Navigator.push(context, MaterialPageRoute(builder: (_) => const MyPostsScreen()));
-          }),
           if (_isStaff)
-            _tile(Icons.admin_panel_settings_rounded, '审核管理', () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminPanelScreen()));
+            _tile(Icons.admin_panel_settings_rounded, '管理审核', () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const AdminReviewScreen()));
             }),
           _tile(Icons.download_rounded, '下载管理', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
@@ -160,7 +155,15 @@ class _ProfileTabState extends State<ProfileTab> {
           _tile(Icons.settings_outlined, '设置', () {
             Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen()));
           }),
-          const SizedBox(height: 16),
+          _tile(Icons.info_outline_rounded, '关于', () {
+            showAboutDialog(
+              context: context,
+              applicationName: 'AnNexus',
+              applicationVersion: '1.0.0',
+              applicationLegalese: '开源应用商店\n官方群：1045956482',
+            );
+          }),
+          const SizedBox(height: 24),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: OutlinedButton.icon(

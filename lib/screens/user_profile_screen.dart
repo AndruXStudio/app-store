@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/auth_service.dart';
-import '../services/community_service.dart';
+import '../services/catalog_service.dart';
 import '../models/app_model.dart';
 import 'app_detail_screen.dart';
 import '../widgets/role_chip.dart';
 
 class UserProfileScreen extends StatefulWidget {
-  final String? username; // null = 当前用户
-  const UserProfileScreen({super.key, this.username});
+  /// 为空则看自己
+  final String? username;
+  final String? userId;
+
+  const UserProfileScreen({super.key, this.username, this.userId});
 
   @override
   State<UserProfileScreen> createState() => _UserProfileScreenState();
@@ -16,13 +19,23 @@ class UserProfileScreen extends StatefulWidget {
 
 class _UserProfileScreenState extends State<UserProfileScreen> {
   final _auth = AuthService();
-  final _com = CommunityService();
-  Map<String, dynamic>? _profile;
-  List<AppModel> _apps = [];
+  final _catalog = CatalogService();
+  final _client = Supabase.instance.client;
+
   bool _loading = true;
-  bool _isSelf = false;
+  bool _isMe = false;
+  String _displayName = '';
   String _username = '';
+  String? _avatar;
+  String _bio = '';
+  String _tags = '';
   String _role = 'user';
+  List<AppModel> _apps = [];
+
+  final _nameCtrl = TextEditingController();
+  final _avatarCtrl = TextEditingController();
+  final _bioCtrl = TextEditingController();
+  final _tagsCtrl = TextEditingController();
 
   @override
   void initState() {
@@ -30,52 +43,88 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _load();
   }
 
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _avatarCtrl.dispose();
+    _bioCtrl.dispose();
+    _tagsCtrl.dispose();
+    super.dispose();
+  }
+
   Future<void> _load() async {
     final me = await _auth.getCurrentUserModel();
-    _username = widget.username ?? me?.username ?? '';
-    _isSelf = me != null && me.username == _username;
-    _profile = await _com.getProfile(_username);
-    _role = _profile?['role']?.toString() ?? await _com.getUserRole(_username);
-    _apps = await _com.appsByUser(_username);
-    // 主页只展示已通过的
-    _apps = _apps.where((a) => a.status == 'approved' || a.status == null).toList();
+    final targetName = widget.username ?? me?.username ?? '';
+    final targetId = widget.userId ?? me?.id ?? '';
+    _isMe = me != null &&
+        (widget.username == null ||
+            widget.username == me.username ||
+            widget.userId == me.id);
+
+    Map<String, dynamic>? row;
+    try {
+      if (targetId.isNotEmpty) {
+        row = await _client.from('users').select().eq('id', targetId).maybeSingle();
+      }
+      row ??= await _client.from('users').select().eq('users', targetName).maybeSingle();
+    } catch (_) {}
+
+    _username = row?['users']?.toString() ?? targetName;
+    _displayName = row?['display_name']?.toString() ?? _username;
+    _avatar = row?['avatar_url']?.toString();
+    _bio = row?['bio']?.toString() ?? '';
+    _tags = row?['tags']?.toString() ?? '';
+    _role = row?['role']?.toString() ?? 'user';
+
+    _nameCtrl.text = _displayName;
+    _avatarCtrl.text = _avatar ?? '';
+    _bioCtrl.text = _bio;
+    _tagsCtrl.text = _tags;
+
+    final sid = targetId.isNotEmpty ? targetId : _username;
+    _apps = await _catalog.fetchBySubmitter(sid);
+    // 自己也能看 pending；别人只看 approved
+    if (!_isMe) {
+      _apps = _apps.where((a) => a.status == 'approved').toList();
+    }
+
     if (mounted) setState(() => _loading = false);
   }
 
-  Future<void> _edit() async {
-    final nameC = TextEditingController(text: _profile?['display_name']?.toString() ?? _username);
-    final avatarC = TextEditingController(text: _profile?['avatar_url']?.toString() ?? '');
-    final bioC = TextEditingController(text: _profile?['bio']?.toString() ?? '');
-    final tagsC = TextEditingController(text: _profile?['tags']?.toString() ?? '');
+  Future<void> _saveProfile() async {
+    final me = await _auth.getCurrentUserModel();
+    if (me == null) return;
+    try {
+      await _client.from('users').update({
+        'display_name': _nameCtrl.text.trim(),
+        'avatar_url': _avatarCtrl.text.trim().isEmpty ? null : _avatarCtrl.text.trim(),
+        'bio': _bioCtrl.text.trim(),
+        'tags': _tagsCtrl.text.trim(),
+      }).or('id.eq.${me.id},users.eq.${me.username}');
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('资料已保存')));
+      setState(() => _loading = true);
+      await _load();
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('保存失败: $e')));
+    }
+  }
+
+  Future<void> _deleteApp(AppModel app) async {
+    final id = app.catalogId;
+    if (id == null) return;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('编辑资料'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(controller: nameC, decoration: const InputDecoration(labelText: '显示名称')),
-              TextField(controller: avatarC, decoration: const InputDecoration(labelText: '头像 URL')),
-              TextField(controller: bioC, decoration: const InputDecoration(labelText: '简介')),
-              TextField(controller: tagsC, decoration: const InputDecoration(labelText: '标签（逗号分隔）')),
-            ],
-          ),
-        ),
+        title: const Text('删除应用'),
+        content: Text('确定删除「${app.name}」？'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('取消')),
-          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('保存')),
+          FilledButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('删除')),
         ],
       ),
     );
     if (ok == true) {
-      await _com.updateProfile(
-        username: _username,
-        displayName: nameC.text.trim(),
-        avatarUrl: avatarC.text.trim(),
-        bio: bioC.text.trim(),
-        tags: tagsC.text.trim(),
-      );
+      await _catalog.deleteApp(id);
       _load();
     }
   }
@@ -83,98 +132,100 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final display = _profile?['display_name']?.toString() ?? _username;
-    final avatar = _profile?['avatar_url']?.toString();
-    final bio = _profile?['bio']?.toString() ?? '';
-    final tags = (_profile?['tags']?.toString() ?? '')
-        .split(',')
-        .map((e) => e.trim())
-        .where((e) => e.isNotEmpty)
-        .toList();
+    if (_loading) {
+      return Scaffold(appBar: AppBar(), body: const Center(child: CircularProgressIndicator()));
+    }
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('用户主页'),
+        title: Text(_isMe ? '我的主页' : '用户主页'),
         actions: [
-          if (_isSelf) IconButton(icon: const Icon(Icons.edit_rounded), onPressed: _edit),
+          if (_isMe)
+            TextButton(onPressed: _saveProfile, child: const Text('保存')),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 40,
-                      backgroundImage: avatar != null && avatar.isNotEmpty ? NetworkImage(avatar) : null,
-                      child: avatar == null || avatar.isEmpty
-                          ? Text(display.isNotEmpty ? display[0].toUpperCase() : '?')
-                          : null,
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(display, style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 4),
-                          RoleChip(role: _role),
-                          if (bio.isNotEmpty) ...[
-                            const SizedBox(height: 6),
-                            Text(bio, style: theme.textTheme.bodyMedium),
-                          ],
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                if (tags.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  Wrap(
-                    spacing: 6,
-                    children: tags.map((t) => Chip(label: Text(t), visualDensity: VisualDensity.compact)).toList(),
-                  ),
-                ],
-                const SizedBox(height: 8),
-                Text('已上架 ${_apps.length} 个应用', style: theme.textTheme.bodySmall),
-                const Divider(height: 32),
-                Text('发布的应用', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                if (_apps.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Center(child: Text('暂无已上架应用')),
-                  )
-                else
-                  ..._apps.map((app) {
-                    return ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: ClipRRect(
-                        borderRadius: BorderRadius.circular(10),
-                        child: CachedNetworkImage(
-                          imageUrl: app.iconUrl,
-                          width: 48,
-                          height: 48,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => const Icon(Icons.android),
-                        ),
-                      ),
-                      title: Text(app.name),
-                      subtitle: Text('v${app.version} · ${app.size}${app.changelog != null ? '\n${app.changelog}' : ''}'),
-                      isThreeLine: app.changelog != null,
-                      trailing: RoleChip(role: app.submitterRole ?? _role),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
-                        );
-                      },
-                    );
-                  }),
-              ],
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Center(
+            child: CircleAvatar(
+              radius: 48,
+              backgroundImage: _avatar != null && _avatar!.isNotEmpty ? NetworkImage(_avatar!) : null,
+              child: (_avatar == null || _avatar!.isEmpty)
+                  ? Text(
+                      _displayName.isNotEmpty ? _displayName[0].toUpperCase() : 'U',
+                      style: const TextStyle(fontSize: 32),
+                    )
+                  : null,
             ),
+          ),
+          const SizedBox(height: 12),
+          Center(child: RoleChip(role: _role)),
+          const SizedBox(height: 8),
+          if (_isMe) ...[
+            TextField(controller: _nameCtrl, decoration: const InputDecoration(labelText: '显示名称', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: _avatarCtrl, decoration: const InputDecoration(labelText: '头像 URL', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: _tagsCtrl, decoration: const InputDecoration(labelText: '自定义标签（逗号分隔）', border: OutlineInputBorder())),
+            const SizedBox(height: 8),
+            TextField(controller: _bioCtrl, maxLines: 2, decoration: const InputDecoration(labelText: '简介', border: OutlineInputBorder())),
+          ] else ...[
+            Center(
+              child: Text(_displayName, style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+            ),
+            if (_tags.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Wrap(
+                  alignment: WrapAlignment.center,
+                  spacing: 6,
+                  children: _tags.split(',').where((e) => e.trim().isNotEmpty).map((t) {
+                    return Chip(label: Text(t.trim(), style: const TextStyle(fontSize: 12)), visualDensity: VisualDensity.compact);
+                  }).toList(),
+                ),
+              ),
+            if (_bio.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 8),
+                child: Text(_bio, textAlign: TextAlign.center),
+              ),
+          ],
+          const SizedBox(height: 20),
+          Text('发布的应用', style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+          const SizedBox(height: 8),
+          if (_apps.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(24),
+              child: Center(child: Text('暂无发布')),
+            )
+          else
+            ..._apps.map((app) {
+              return Card(
+                child: ListTile(
+                  title: Text(app.name),
+                  subtitle: Text(
+                    '${app.version} · ${app.status == 'approved' ? '已上架' : app.status == 'pending' ? '审核中' : app.status ?? ''}',
+                  ),
+                  trailing: _isMe
+                      ? IconButton(
+                          icon: const Icon(Icons.delete_outline),
+                          onPressed: () => _deleteApp(app),
+                        )
+                      : const Icon(Icons.chevron_right),
+                  onTap: app.status == 'approved' || _isMe
+                      ? () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
+                          );
+                        }
+                      : null,
+                ),
+              );
+            }),
+        ],
+      ),
     );
   }
 }
