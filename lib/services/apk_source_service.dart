@@ -1,7 +1,7 @@
 import '../models/app_model.dart';
 import 'catalog_service.dart';
 
-/// 仅用户信任库（Supabase），无开源第三方源
+/// 仅用户信任库（Supabase）
 class ApkSourceService {
   final CatalogService _catalog = CatalogService();
 
@@ -10,11 +10,10 @@ class ApkSourceService {
   }
 
   Future<List<AppModel>> featured({String source = 'all'}) async {
-    final list = await _catalog.fetchAll();
-    return list;
+    return _catalog.fetchPublished();
   }
 
   Future<List<AppModel>> games({String source = 'all'}) async {
-    return _catalog.fetchAll(category: 'game');
+    return _catalog.fetchPublished(category: 'game');
   }
 }
