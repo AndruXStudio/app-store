@@ -32,62 +32,60 @@ class _AppsTabState extends State<AppsTab> {
     final list = provider.apps;
 
     return Scaffold(
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // Material 3 large title that collapses to centered small title
-          SliverAppBar.large(
-            pinned: true,
-            floating: false,
-            snap: false,
-            title: const Text('应用'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search_rounded),
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
-                },
-              ),
-              Badge(
-                isLabelVisible: downloadService.activeTasks.isNotEmpty,
-                label: Text('${downloadService.activeTasks.length}'),
-                child: IconButton(
-                  icon: const Icon(Icons.download_rounded),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar.large(
+              title: const Text('应用'),
+              forceElevated: innerBoxIsScrolled,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchScreen()),
+                    );
                   },
                 ),
-              ),
-            ],
-          ),
-          if (provider.loadingApps)
-            const //
-                SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-          else if (list.isEmpty)
-            SliverFillRemaining(
-              hasScrollBody: true,
-              child: ListView(
-                children: const [
-                  SizedBox(height: 80),
-                  Center(child: Text('暂无已上架应用')),
-                  SizedBox(height: 8),
-                  Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
-                ],
-              ),
-            )
-          else
-            // Refresh via NotificationListener is awkward; use CupertinoSliverRefreshControl alternative:
-            // Keep simple ListView as SliverList
-            SliverPadding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _AppTile(app: list[index]),
-                  childCount: list.length,
+                Badge(
+                  isLabelVisible: downloadService.activeTasks.isNotEmpty,
+                  label: Text('${downloadService.activeTasks.length}'),
+                  child: IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                      );
+                    },
+                  ),
                 ),
-              ),
+              ],
             ),
-        ],
+          ];
+        },
+        body: provider.loadingApps
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () => context.read<AppProvider>().loadApps(),
+                child: list.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 120),
+                          Center(child: Text('暂无已上架应用')),
+                          SizedBox(height: 8),
+                          Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
+                        ],
+                      )
+                    : ListView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.symmetric(vertical: 8),
+                        itemCount: list.length,
+                        itemBuilder: (context, index) => _AppTile(app: list[index]),
+                      ),
+              ),
       ),
     );
   }
@@ -102,7 +100,12 @@ class _AppTile extends StatelessWidget {
     return ListTile(
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
       leading: AppIcon(url: app.iconUrl, name: app.name, size: 56, radius: 14),
-      title: Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+      title: Text(
+        app.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+      ),
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -115,7 +118,10 @@ class _AppTile extends StatelessWidget {
               Flexible(
                 child: Text(
                   '${app.version} · ${app.size}',
-                  style: TextStyle(fontSize: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  ),
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
@@ -125,9 +131,14 @@ class _AppTile extends StatelessWidget {
       ),
       isThreeLine: true,
       trailing: FilledButton.tonal(
-        style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 16)),
+        style: FilledButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+        ),
         onPressed: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
+          );
         },
         child: const Text('查看'),
       ),

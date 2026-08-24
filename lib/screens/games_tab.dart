@@ -31,57 +31,66 @@ class _GamesTabState extends State<GamesTab> {
     final list = provider.games;
 
     return Scaffold(
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          // ignore: prefer_const_constructors
-          SliverAppBar.large(
-            pinned: true,
-            floating: false,
-            title: const Text('游戏'),
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.search_rounded),
-                onPressed: () {
-                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
-                },
-              ),
-              Badge(
-                isLabelVisible: downloadService.activeTasks.isNotEmpty,
-                label: Text('${downloadService.activeTasks.length}'),
-                child: IconButton(
-                  icon: const Icon(Icons.download_rounded),
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar.large(
+              title: const Text('游戏'),
+              forceElevated: innerBoxIsScrolled,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.search_rounded),
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SearchScreen()),
+                    );
                   },
                 ),
-              ),
-            ],
-          ),
-          if (provider.loadingGames)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-          else if (list.isEmpty)
-            const SliverFillRemaining(
-              child: Center(child: Text('暂无已上架游戏\n发布时把分类选成「游戏」')),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.all(12),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.72,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
+                Badge(
+                  isLabelVisible: downloadService.activeTasks.isNotEmpty,
+                  label: Text('${downloadService.activeTasks.length}'),
+                  child: IconButton(
+                    icon: const Icon(Icons.download_rounded),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
+                      );
+                    },
+                  ),
                 ),
-                delegate: //
-                    SliverChildBuilderDelegate(
-                  (context, index) => _GameCard(app: list[index]),
-                  childCount: list.length,
-                ),
-              ),
+              ],
             ),
-        ],
+          ];
+        },
+        body: provider.loadingGames
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () => context.read<AppProvider>().loadGames(),
+                child: list.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: const [
+                          SizedBox(height: 120),
+                          Center(child: Text('暂无已上架游戏')),
+                          SizedBox(height: 8),
+                          Center(child: Text('发布时把分类选成「游戏」')),
+                        ],
+                      )
+                    : GridView.builder(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: list.length,
+                        itemBuilder: (context, index) => _GameCard(app: list[index]),
+                      ),
+              ),
       ),
     );
   }
@@ -119,16 +128,29 @@ class _GameCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(app.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                  Text(
+                    app.name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
                   const SizedBox(height: 2),
-                  Text(app.developer, maxLines: 1, overflow: TextOverflow.ellipsis, style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant)),
+                  Text(
+                    app.developer,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(fontSize: 12, color: colorScheme.onSurfaceVariant),
+                  ),
                   const SizedBox(height: 4),
                   Row(
                     children: [
                       Icon(Icons.star_rounded, size: 14, color: Colors.amber.shade700),
                       Text(' ${app.rating.toStringAsFixed(1)}', style: const TextStyle(fontSize: 12)),
                       const Spacer(),
-                      Text(app.size, style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant)),
+                      Text(
+                        app.size,
+                        style: TextStyle(fontSize: 11, color: colorScheme.onSurfaceVariant),
+                      ),
                     ],
                   ),
                 ],

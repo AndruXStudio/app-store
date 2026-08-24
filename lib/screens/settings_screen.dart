@@ -22,7 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _load() async {
-    final s = await _local.getSettings();
+    final s = await _local.loadSettings();
     if (mounted) setState(() { _settings = s; _loading = false; });
   }
 
@@ -49,23 +49,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _darkLabel(String v) {
+    switch (v) {
+      case 'light':
+        return '浅色';
+      case 'dark':
+        return '深色';
+      default:
+        return '跟随系统';
+    }
+  }
+
+  Widget _section(String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
+      child: Text(
+        title,
+        style: TextStyle(
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.primary,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Scaffold(
-      body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(),
-        slivers: [
-          const SliverAppBar.large(
-            pinned: true,
-            title: Text('设置'),
-          ),
-          if (_loading)
-            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
-          else
-            SliverList(
-              delegate: SliverChildListDelegate([
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) {
+          return [
+            SliverAppBar.large(
+              title: const Text('设置'),
+              forceElevated: innerBoxIsScrolled,
+            ),
+          ];
+        },
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
                   _section('外观'),
                   ListTile(
                     leading: const Icon(Icons.brightness_6_rounded),
@@ -79,9 +103,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              ListTile(title: const Text('跟随系统'), onTap: () => Navigator.pop(ctx, 'system')),
-                              ListTile(title: const Text('浅色'), onTap: () => Navigator.pop(ctx, 'light')),
-                              ListTile(title: const Text('深色'), onTap: () => Navigator.pop(ctx, 'dark')),
+                              ListTile(
+                                title: const Text('跟随系统'),
+                                onTap: () => Navigator.pop(ctx, 'system'),
+                              ),
+                              ListTile(
+                                title: const Text('浅色'),
+                                onTap: () => Navigator.pop(ctx, 'light'),
+                              ),
+                              ListTile(
+                                title: const Text('深色'),
+                                onTap: () => Navigator.pop(ctx, 'dark'),
+                              ),
                             ],
                           ),
                         ),
@@ -128,36 +161,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         context: context,
                         applicationName: 'AnNexus',
                         applicationVersion: '1.0.0',
-                        applicationLegalese: '用户发布的应用商店\n包名 com.andrux.nexus\n官方群：1045956482',
+                        applicationLegalese:
+                            '用户发布的应用商店\n包名 com.andrux.nexus\n官方群：1045956482',
                       );
                     },
                   ),
                   const SizedBox(height: 40),
-              ]),
-            ),
-        ],
+                ],
+              ),
       ),
     );
-  }
-
-  Widget _section(String title) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
-      child: Text(
-        title,
-        style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
-      ),
-    );
-  }
-
-  String _darkLabel(String v) {
-    switch (v) {
-      case 'light':
-        return '浅色';
-      case 'dark':
-        return '深色';
-      default:
-        return '跟随系统';
-    }
   }
 }
