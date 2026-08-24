@@ -93,8 +93,6 @@ class CatalogService {
         .update({
           'status': approve ? 'approved' : 'rejected',
           'published': approve,
-          'reviewed_at': DateTime.now().toIso8601String(),
-          'review_note': note,
         })
         .eq('id', id)
         .select('id, status, published');

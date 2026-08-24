@@ -113,8 +113,6 @@ class CommunityService {
     final payload = {
       'status': approve ? 'approved' : 'rejected',
       'published': approve,
-      'reject_reason': reason,
-      'reviewed_at': DateTime.now().toIso8601String(),
     };
     final res = await _c.from('apps').update(payload).eq('id', id).select('id,status,published');
     if (res is! List || res.isEmpty) {

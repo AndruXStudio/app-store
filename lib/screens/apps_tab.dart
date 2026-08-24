@@ -29,13 +29,17 @@ class _AppsTabState extends State<AppsTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
-    // 只显示 category == app（provider 已过滤）
     final list = provider.apps;
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // Material 3 large title that collapses to centered small title
           SliverAppBar.large(
+            pinned: true,
+            floating: false,
+            snap: false,
             title: const Text('应用'),
             actions: [
               IconButton(
@@ -56,26 +60,34 @@ class _AppsTabState extends State<AppsTab> {
               ),
             ],
           ),
-        ],
-        body: provider.loadingApps
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: () => context.read<AppProvider>().loadApps(),
-                child: list.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 120),
-                          Center(child: Text('暂无已上架应用')),
-                          SizedBox(height: 8),
-                          Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
-                        ],
-                      )
-                    : ListView.builder(
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: list.length,
-                        itemBuilder: (context, index) => _AppTile(app: list[index]),
-                      ),
+          if (provider.loadingApps)
+            const //
+                SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+          else if (list.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: true,
+              child: ListView(
+                children: const [
+                  SizedBox(height: 80),
+                  Center(child: Text('暂无已上架应用')),
+                  SizedBox(height: 8),
+                  Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
+                ],
               ),
+            )
+          else
+            // Refresh via NotificationListener is awkward; use CupertinoSliverRefreshControl alternative:
+            // Keep simple ListView as SliverList
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _AppTile(app: list[index]),
+                  childCount: list.length,
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }

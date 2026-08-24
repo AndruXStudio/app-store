@@ -54,14 +54,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, _) => [
-          const SliverAppBar.large(title: Text('设置')),
-        ],
-        body: _loading
-            ? const Center(child: CircularProgressIndicator())
-            : ListView(
-                children: [
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          const SliverAppBar.large(
+            pinned: true,
+            title: Text('设置'),
+          ),
+          if (_loading)
+            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+          else
+            SliverList(
+              delegate: SliverChildListDelegate([
                   _section('外观'),
                   ListTile(
                     leading: const Icon(Icons.brightness_6_rounded),
@@ -129,8 +133,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     },
                   ),
                   const SizedBox(height: 40),
-                ],
-              ),
+              ]),
+            ),
+        ],
       ),
     );
   }

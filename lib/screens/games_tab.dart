@@ -31,9 +31,13 @@ class _GamesTabState extends State<GamesTab> {
     final list = provider.games;
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+      body: CustomScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        slivers: [
+          // ignore: prefer_const_constructors
           SliverAppBar.large(
+            pinned: true,
+            floating: false,
             title: const Text('游戏'),
             actions: [
               IconButton(
@@ -54,32 +58,30 @@ class _GamesTabState extends State<GamesTab> {
               ),
             ],
           ),
-        ],
-        body: provider.loadingGames
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: () => context.read<AppProvider>().loadGames(),
-                child: list.isEmpty
-                    ? ListView(
-                        children: const [
-                          SizedBox(height: 120),
-                          Center(child: Text('暂无已上架游戏')),
-                          SizedBox(height: 8),
-                          Center(child: Text('发布时把分类选成「游戏」')),
-                        ],
-                      )
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(12),
-                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          childAspectRatio: 0.72,
-                          crossAxisSpacing: 12,
-                          mainAxisSpacing: 12,
-                        ),
-                        itemCount: list.length,
-                        itemBuilder: (context, index) => _GameCard(app: list[index]),
-                      ),
+          if (provider.loadingGames)
+            const SliverFillRemaining(child: Center(child: CircularProgressIndicator()))
+          else if (list.isEmpty)
+            const SliverFillRemaining(
+              child: Center(child: Text('暂无已上架游戏\n发布时把分类选成「游戏」')),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.all(12),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  childAspectRatio: 0.72,
+                  crossAxisSpacing: 12,
+                  mainAxisSpacing: 12,
+                ),
+                delegate: //
+                    SliverChildBuilderDelegate(
+                  (context, index) => _GameCard(app: list[index]),
+                  childCount: list.length,
+                ),
               ),
+            ),
+        ],
       ),
     );
   }
