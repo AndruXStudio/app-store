@@ -54,7 +54,7 @@ class _AppsTabState extends State<AppsTab> {
       );
     } else {
       bodySliver = SliverPadding(
-        padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
+        padding: const EdgeInsets.only(bottom: 24),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) => _AppTile(app: list[index]),
@@ -64,6 +64,9 @@ class _AppsTabState extends State<AppsTab> {
       );
     }
 
+    // 内容少时才补高度，避免大片空白
+    final needSpacer = !provider.loadingApps && list.length < 6;
+
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -71,7 +74,7 @@ class _AppsTabState extends State<AppsTab> {
         ),
         slivers: [
           SliverAppBar(
-            expandedHeight: 120.0,
+            expandedHeight: 152.0,
             floating: false,
             pinned: true,
             snap: false,
@@ -105,8 +108,8 @@ class _AppsTabState extends State<AppsTab> {
             ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: false,
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
-              expandedTitleScale: 1.5,
+              titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
+              expandedTitleScale: 1.7,
               title: Text(
                 '应用',
                 style: TextStyle(
@@ -121,6 +124,8 @@ class _AppsTabState extends State<AppsTab> {
             onRefresh: () => context.read<AppProvider>().loadApps(),
           ),
           bodySliver,
+          if (needSpacer)
+            const SliverToBoxAdapter(child: SizedBox(height: 200)),
         ],
       ),
     );

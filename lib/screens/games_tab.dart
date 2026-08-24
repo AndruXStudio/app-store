@@ -46,9 +46,8 @@ class _GamesTabState extends State<GamesTab> {
         ),
       );
     } else {
-      // 顶部多留一点，避免卡片顶到折叠栏
       bodySliver = SliverPadding(
-        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
@@ -64,6 +63,8 @@ class _GamesTabState extends State<GamesTab> {
       );
     }
 
+    final needSpacer = !provider.loadingGames && list.length < 4;
+
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
@@ -71,7 +72,7 @@ class _GamesTabState extends State<GamesTab> {
         ),
         slivers: [
           SliverAppBar(
-            expandedHeight: 120.0,
+            expandedHeight: 152.0,
             floating: false,
             pinned: true,
             snap: false,
@@ -105,8 +106,8 @@ class _GamesTabState extends State<GamesTab> {
             ],
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: false,
-              titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
-              expandedTitleScale: 1.5,
+              titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 16),
+              expandedTitleScale: 1.7,
               title: Text(
                 '游戏',
                 style: TextStyle(
@@ -121,6 +122,8 @@ class _GamesTabState extends State<GamesTab> {
             onRefresh: () => context.read<AppProvider>().loadGames(),
           ),
           bodySliver,
+          if (needSpacer)
+            const SliverToBoxAdapter(child: SizedBox(height: 200)),
         ],
       ),
     );
