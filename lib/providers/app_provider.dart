@@ -8,14 +8,21 @@ class AppProvider extends ChangeNotifier {
   List<AppModel> _apps = [];
   List<AppModel> _games = [];
   List<AppModel> _featured = [];
+  List<AppModel> _searchResults = [];
+  String _searchQuery = '';
+
   bool loadingApps = false;
   bool loadingGames = false;
   bool loadingHome = false;
+  bool loadingFeatured = false;
+  bool loadingSearch = false;
   String? error;
 
   List<AppModel> get apps => _apps;
   List<AppModel> get games => _games;
   List<AppModel> get featured => _featured;
+  List<AppModel> get searchResults => _searchResults;
+  String get searchQuery => _searchQuery;
 
   Future<void> loadApps() async {
     loadingApps = true;
@@ -49,16 +56,44 @@ class AppProvider extends ChangeNotifier {
 
   Future<void> loadHome() async {
     loadingHome = true;
+    loadingFeatured = true;
     notifyListeners();
     try {
       final all = await _catalog.fetchPublished();
-      _featured = all.take(8).toList();
+      _featured = all;
       _apps = all.where((a) => a.category == 'app').toList();
       _games = all.where((a) => a.category == 'game').toList();
     } catch (e) {
       error = e.toString();
     }
     loadingHome = false;
+    loadingFeatured = false;
+    notifyListeners();
+  }
+
+  Future<void> search(String query) async {
+    _searchQuery = query.trim();
+    if (_searchQuery.isEmpty) {
+      _searchResults = [];
+      notifyListeners();
+      return;
+    }
+    loadingSearch = true;
+    notifyListeners();
+    try {
+      _searchResults = await _catalog.search(_searchQuery);
+    } catch (e) {
+      error = e.toString();
+      _searchResults = [];
+    }
+    loadingSearch = false;
+    notifyListeners();
+  }
+
+  void clearSearch() {
+    _searchQuery = '';
+    _searchResults = [];
+    loadingSearch = false;
     notifyListeners();
   }
 
