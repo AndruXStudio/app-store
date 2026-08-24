@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: CustomScrollView(
@@ -83,9 +83,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          // 与示例完全一致的折叠标题栏
+          // 用户提供的折叠标题栏示例
           SliverAppBar(
-            expandedHeight: 120,
+            expandedHeight: 120.0,
             floating: false,
             pinned: true,
             snap: false,
@@ -94,14 +94,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
             scrolledUnderElevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
-              onPressed: () => Navigator.pop(context),
+              onPressed: () => Navigator.of(context).maybePop(),
             ),
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.only(left: 56, bottom: 12),
               title: Text(
                 '设置',
                 style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
+                  color: colorScheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -116,6 +116,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           else
             SliverList(
+              // ignore: prefer_const_literals_to_create_immutables
               delegate: SliverChildListDelegate([
                 _section('外观'),
                 ListTile(
@@ -193,7 +194,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                // 保证可滚动，折叠动画能触发
+                // 留足高度保证能滑
                 const SizedBox(height: 300),
               ]),
             ),

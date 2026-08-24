@@ -29,7 +29,7 @@ class _GamesTabState extends State<GamesTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.games;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -41,7 +41,7 @@ class _GamesTabState extends State<GamesTab> {
           ),
           slivers: [
             SliverAppBar(
-              expandedHeight: 120,
+              expandedHeight: 120.0,
               floating: false,
               pinned: true,
               snap: false,
@@ -77,7 +77,7 @@ class _GamesTabState extends State<GamesTab> {
                 title: Text(
                   '游戏',
                   style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
+                    color: colorScheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -113,8 +113,6 @@ class _GamesTabState extends State<GamesTab> {
                   ),
                 ),
               ),
-            if (!provider.loadingGames && list.length < 4)
-              const SliverToBoxAdapter(child: SizedBox(height: 280)),
           ],
         ),
       ),

@@ -30,8 +30,7 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
-    final cs = Theme.of(context).colorScheme;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -42,9 +41,10 @@ class _AppsTabState extends State<AppsTab> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            // 可折叠顶部标题栏（与示例一致）
+            // 可折叠顶部标题栏（用户示例写法）
+            // ignore: prefer_const_constructors
             SliverAppBar(
-              expandedHeight: 120,
+              expandedHeight: 120.0,
               floating: false,
               pinned: true,
               snap: false,
@@ -80,7 +80,7 @@ class _AppsTabState extends State<AppsTab> {
                 title: Text(
                   '应用',
                   style: TextStyle(
-                    color: isDark ? Colors.white : Colors.black,
+                    color: colorScheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -89,7 +89,9 @@ class _AppsTabState extends State<AppsTab> {
               ),
             ),
             if (provider.loadingApps)
-              const SliverFillRemaining(
+              const //
+                  // loading
+                  SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
               )
@@ -109,16 +111,14 @@ class _AppsTabState extends State<AppsTab> {
             else
               SliverPadding(
                 padding: const EdgeInsets.only(bottom: 24),
-                sliver: SliverList(
+                sliver: //
+                    SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _AppTile(app: list[index]),
                     childCount: list.length,
                   ),
                 ),
               ),
-            // 内容少时也能滑出折叠
-            if (!provider.loadingApps && list.length < 6)
-              const SliverToBoxAdapter(child: SizedBox(height: 280)),
           ],
         ),
       ),
