@@ -29,7 +29,7 @@ class _GamesTabState extends State<GamesTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.games;
-    final colorScheme = Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -77,7 +77,7 @@ class _GamesTabState extends State<GamesTab> {
                 title: Text(
                   '游戏',
                   style: TextStyle(
-                    color: colorScheme.onSurface,
+                    color: scheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -113,6 +113,8 @@ class _GamesTabState extends State<GamesTab> {
                   ),
                 ),
               ),
+            if (!provider.loadingGames && list.length < 4)
+              const SliverToBoxAdapter(child: SizedBox(height: 300)),
           ],
         ),
       ),

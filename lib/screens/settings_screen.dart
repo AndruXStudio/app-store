@@ -75,7 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: CustomScrollView(
@@ -83,7 +83,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          // 用户提供的折叠标题栏示例
+          // 与你示例一致的折叠标题栏
           SliverAppBar(
             expandedHeight: 120.0,
             floating: false,
@@ -101,7 +101,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               title: Text(
                 '设置',
                 style: TextStyle(
-                  color: colorScheme.onSurface,
+                  color: scheme.onSurface,
                   fontSize: 20,
                   fontWeight: FontWeight.w600,
                 ),
@@ -116,7 +116,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
             )
           else
             SliverList(
-              // ignore: prefer_const_literals_to_create_immutables
               delegate: SliverChildListDelegate([
                 _section('外观'),
                 ListTile(
@@ -194,7 +193,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                // 留足高度保证能滑
+                // 保证可滚动以触发折叠动画
                 const SizedBox(height: 300),
               ]),
             ),

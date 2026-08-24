@@ -30,7 +30,7 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
-    final colorScheme = Theme.of(context).colorScheme;
+    final scheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -41,8 +41,7 @@ class _AppsTabState extends State<AppsTab> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            // 可折叠顶部标题栏（用户示例写法）
-            // ignore: prefer_const_constructors
+            // 可折叠顶部标题栏（与你给的示例一致）
             SliverAppBar(
               expandedHeight: 120.0,
               floating: false,
@@ -80,7 +79,7 @@ class _AppsTabState extends State<AppsTab> {
                 title: Text(
                   '应用',
                   style: TextStyle(
-                    color: colorScheme.onSurface,
+                    color: scheme.onSurface,
                     fontSize: 20,
                     fontWeight: FontWeight.w600,
                   ),
@@ -89,9 +88,7 @@ class _AppsTabState extends State<AppsTab> {
               ),
             ),
             if (provider.loadingApps)
-              const //
-                  // loading
-                  SliverFillRemaining(
+              const SliverFillRemaining(
                 hasScrollBody: false,
                 child: Center(child: CircularProgressIndicator()),
               )
@@ -111,14 +108,16 @@ class _AppsTabState extends State<AppsTab> {
             else
               SliverPadding(
                 padding: const EdgeInsets.only(bottom: 24),
-                sliver: //
-                    SliverList(
+                sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) => _AppTile(app: list[index]),
                     childCount: list.length,
                   ),
                 ),
               ),
+            // 保证内容少时也能上滑折叠
+            if (!provider.loadingApps && list.length < 8)
+              const SliverToBoxAdapter(child: SizedBox(height: 300)),
           ],
         ),
       ),
