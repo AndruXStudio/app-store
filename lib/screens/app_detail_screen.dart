@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
+import '../widgets/app_icon.dart';
 import '../models/app_model.dart';
 import '../services/download_service.dart';
 import '../services/local_data_service.dart';
@@ -201,16 +201,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
               background: Container(
                 color: colorScheme.primaryContainer,
                 child: Center(
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: CachedNetworkImage(
-                      imageUrl: app.iconUrl,
-                      width: 100,
-                      height: 100,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) =>
-                          Icon(Icons.android_rounded, size: 80, color: colorScheme.primary),
-                    ),
+                  child: AppIcon(url: app.iconUrl, name: app.name, size: 100, radius: 24),
                   ),
                 ),
               ),

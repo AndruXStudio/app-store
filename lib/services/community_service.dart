@@ -110,11 +110,14 @@ class CommunityService {
   }
 
   Future<void> reviewApp(int id, {required bool approve, String? reason}) async {
-    await _c.from('apps').update({
+    final res = await _c.from('apps').update({
       'status': approve ? 'approved' : 'rejected',
       'published': approve,
       'reject_reason': reason,
-    }).eq('id', id);
+    }).eq('id', id).select();
+    if (res is List && res.isEmpty) {
+      throw Exception('更新了 0 行，请在 Supabase 为 apps 表添加 UPDATE 策略');
+    }
   }
 
   Future<List<AppModel>> appsByUser(String username) async {

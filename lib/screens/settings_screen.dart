@@ -23,12 +23,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   Future<void> _load() async {
     final s = await _local.getSettings();
-    if (mounted) {
-      setState(() {
-        _settings = s;
-        _loading = false;
-      });
-    }
+    if (mounted) setState(() { _settings = s; _loading = false; });
   }
 
   Future<void> _update(String key, dynamic value) async {
@@ -59,99 +54,84 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('设置')),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              children: [
-                _section('外观'),
-                ListTile(
-                  leading: const Icon(Icons.brightness_6_rounded),
-                  title: const Text('深色模式'),
-                  subtitle: Text(_darkLabel(_settings['darkMode'] ?? 'system')),
-                  trailing: const Icon(Icons.chevron_right_rounded),
-                  onTap: () async {
-                    final v = await showModalBottomSheet<String>(
-                      context: context,
-                      builder: (ctx) => SafeArea(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            ListTile(title: const Text('跟随系统'), onTap: () => Navigator.pop(ctx, 'system')),
-                            ListTile(title: const Text('浅色'), onTap: () => Navigator.pop(ctx, 'light')),
-                            ListTile(title: const Text('深色'), onTap: () => Navigator.pop(ctx, 'dark')),
-                          ],
+      body: NestedScrollView(
+        headerSliverBuilder: (context, _) => [
+          const SliverAppBar.large(title: Text('设置')),
+        ],
+        body: _loading
+            ? const Center(child: CircularProgressIndicator())
+            : ListView(
+                children: [
+                  _section('外观'),
+                  ListTile(
+                    leading: const Icon(Icons.brightness_6_rounded),
+                    title: const Text('深色模式'),
+                    subtitle: Text(_darkLabel(_settings['darkMode'] ?? 'system')),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: () async {
+                      final v = await showModalBottomSheet<String>(
+                        context: context,
+                        builder: (ctx) => SafeArea(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              ListTile(title: const Text('跟随系统'), onTap: () => Navigator.pop(ctx, 'system')),
+                              ListTile(title: const Text('浅色'), onTap: () => Navigator.pop(ctx, 'light')),
+                              ListTile(title: const Text('深色'), onTap: () => Navigator.pop(ctx, 'dark')),
+                            ],
+                          ),
                         ),
-                      ),
-                    );
-                    if (v != null) await _update('darkMode', v);
-                  },
-                ),
-                _section('下载'),
-                SwitchListTile(
-                  secondary: const Icon(Icons.wifi_rounded),
-                  title: const Text('仅 Wi‑Fi 下载'),
-                  subtitle: const Text('开启后移动网络下不自动下载'),
-                  value: _settings['wifiOnlyDownload'] == true,
-                  onChanged: (v) => _update('wifiOnlyDownload', v),
-                ),
-                SwitchListTile(
-                  secondary: const Icon(Icons.science_outlined),
-                  title: const Text('显示预发布版本'),
-                  subtitle: const Text('GitHub 搜索包含 pre-release'),
-                  value: _settings['showPreRelease'] != false,
-                  onChanged: (v) => _update('showPreRelease', v),
-                ),
-                _section('社区'),
-                ListTile(
-                  leading: const Icon(Icons.groups_rounded, color: Colors.blue),
-                  title: const Text('加入官方 QQ 群'),
-                  subtitle: const Text('群号：1045956482'),
-                  trailing: const Icon(Icons.open_in_new_rounded),
-                  onTap: _openQQGroup,
-                ),
-                ListTile(
-                  leading: const Icon(Icons.tag_rounded),
-                  title: const Text('复制群号'),
-                  subtitle: const Text('1045956482'),
-                  onTap: () async {
-                    await Clipboard.setData(const ClipboardData(text: '1045956482'));
-                    if (mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('群号已复制')),
                       );
-                    }
-                  },
-                ),
-                _section('关于'),
-                ListTile(
-                  leading: const Icon(Icons.info_outline_rounded),
-                  title: const Text('关于 AnNexus'),
-                  subtitle: const Text('版本 1.0.0'),
-                  onTap: () {
-                    showAboutDialog(
-                      context: context,
-                      applicationName: 'AnNexus',
-                      applicationVersion: '1.0.0',
-                      applicationLegalese:
-                          '应用商店\n基于 Flutter · Supabase · GitHub\n包名 com.andrux.nexus\n官方群：1045956482',
-                    );
-                  },
-                ),
-                const SizedBox(height: 24),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Text(
-                    'AnNexus · 发现优质开源应用',
-                    textAlign: TextAlign.center,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: theme.colorScheme.onSurfaceVariant,
-                    ),
+                      if (v != null) await _update('darkMode', v);
+                    },
                   ),
-                ),
-                const SizedBox(height: 40),
-              ],
-            ),
+                  _section('下载'),
+                  SwitchListTile(
+                    secondary: const Icon(Icons.wifi_rounded),
+                    title: const Text('仅 Wi‑Fi 下载'),
+                    subtitle: const Text('开启后移动网络下不自动下载'),
+                    value: _settings['wifiOnlyDownload'] == true,
+                    onChanged: (v) => _update('wifiOnlyDownload', v),
+                  ),
+                  _section('社区'),
+                  ListTile(
+                    leading: const Icon(Icons.groups_rounded, color: Colors.blue),
+                    title: const Text('加入官方 QQ 群'),
+                    subtitle: const Text('群号：1045956482'),
+                    trailing: const Icon(Icons.open_in_new_rounded),
+                    onTap: _openQQGroup,
+                  ),
+                  ListTile(
+                    leading: const Icon(Icons.tag_rounded),
+                    title: const Text('复制群号'),
+                    subtitle: const Text('1045956482'),
+                    onTap: () async {
+                      await Clipboard.setData(const ClipboardData(text: '1045956482'));
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('群号已复制')),
+                        );
+                      }
+                    },
+                  ),
+                  _section('关于'),
+                  ListTile(
+                    leading: const Icon(Icons.info_outline_rounded),
+                    title: const Text('关于 AnNexus'),
+                    subtitle: const Text('版本 1.0.0'),
+                    onTap: () {
+                      showAboutDialog(
+                        context: context,
+                        applicationName: 'AnNexus',
+                        applicationVersion: '1.0.0',
+                        applicationLegalese: '用户发布的应用商店\n包名 com.andrux.nexus\n官方群：1045956482',
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 40),
+                ],
+              ),
+      ),
     );
   }
 
@@ -160,10 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       padding: const EdgeInsets.fromLTRB(16, 20, 16, 4),
       child: Text(
         title,
-        style: TextStyle(
-          fontWeight: FontWeight.bold,
-          color: Theme.of(context).colorScheme.primary,
-        ),
+        style: TextStyle(fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary),
       ),
     );
   }

@@ -1,37 +1,72 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 
-/// 圆角正方形；加载失败或空 URL 时：黑底 + 白色 Android 图标
 class AppIcon extends StatelessWidget {
   final String? url;
+  final String name;
   final double size;
   final double radius;
 
-  const AppIcon({super.key, this.url, this.size = 48, this.radius = 12});
+  const AppIcon({
+    super.key,
+    required this.url,
+    required this.name,
+    this.size = 56,
+    this.radius = 12,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final fallback = Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        color: Colors.black,
-        borderRadius: BorderRadius.circular(radius),
-      ),
-      child: Icon(Icons.android, color: Colors.white, size: size * 0.55),
-    );
+    final u = url?.trim() ?? '';
+    Widget child;
 
-    if (url == null || url!.trim().isEmpty) return fallback;
-
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(radius),
-      child: CachedNetworkImage(
-        imageUrl: url!,
+    if (u.startsWith('data:image')) {
+      try {
+        final b64 = u.split(',').last;
+        final bytes = base64Decode(b64);
+        child = Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+      } catch (_) {
+        child = _fallback(context);
+      }
+    } else if (u.startsWith('http')) {
+      child = CachedNetworkImage(
+        imageUrl: u,
         width: size,
         height: size,
         fit: BoxFit.cover,
-        placeholder: (_, __) => fallback,
-        errorWidget: (_, __, ___) => fallback,
+        errorWidget: (_, __, ___) => _fallback(context),
+        placeholder: (_, __) => Container(
+          width: size,
+          height: size,
+          color: Colors.grey.shade300,
+          child: const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
+        ),
+      );
+    } else {
+      child = _fallback(context);
+    }
+
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox(width: size, height: size, child: child),
+    );
+  }
+
+  Widget _fallback(BuildContext context) {
+    final letter = name.isNotEmpty ? name.characters.first : '?';
+    return Container(
+      width: size,
+      height: size,
+      color: Theme.of(context).colorScheme.primaryContainer,
+      alignment: Alignment.center,
+      child: Text(
+        letter,
+        style: TextStyle(
+          fontSize: size * 0.36,
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).colorScheme.onPrimaryContainer,
+        ),
       ),
     );
   }

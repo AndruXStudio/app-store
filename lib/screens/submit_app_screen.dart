@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -91,6 +92,34 @@ class _SubmitAppScreenState extends State<SubmitAppScreen> {
         );
     final publicUrl = client.storage.from('apps').getPublicUrl(path);
     return publicUrl;
+  }
+
+
+  Future<void> _pickIcon() async {
+    final result = await FilePicker.platform.pickFiles(type: FileType.image, withData: true);
+    if (result == null || result.files.isEmpty) return;
+    final f = result.files.single;
+    final bytes = f.bytes ?? (f.path != null ? await File(f.path!).readAsBytes() : null);
+    if (bytes == null) return;
+    // limit ~200KB for base64 in DB
+    if (bytes.length > 300 * 1024) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('图标请小于 300KB，或使用图标 URL')),
+        );
+      }
+      return;
+    }
+    final b64 = base64Encode(bytes);
+    final mime = (f.extension ?? 'png').toLowerCase() == 'jpg' || (f.extension ?? '') == 'jpeg'
+        ? 'image/jpeg'
+        : 'image/png';
+    setState(() {
+      _icon.text = 'data:$mime;base64,$b64';
+    });
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('已选择图标（将以 base64 保存）')));
+    }
   }
 
   Future<void> _submit() async {
@@ -199,7 +228,16 @@ class _SubmitAppScreenState extends State<SubmitAppScreen> {
             const SizedBox(height: 12),
             TextFormField(
               controller: _icon,
-              decoration: const InputDecoration(labelText: '图标 URL（可选）', border: OutlineInputBorder()),
+              decoration: const InputDecoration(
+                labelText: '图标 URL 或 base64（可选）',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              onPressed: _loading ? null : _pickIcon,
+              icon: const Icon(Icons.image_outlined),
+              label: const Text('从相册选择图标（转 base64）'),
             ),
             const SizedBox(height: 12),
             Row(

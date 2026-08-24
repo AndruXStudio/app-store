@@ -155,8 +155,7 @@ class CatalogService {
       name: name,
       developer: m['developer']?.toString() ?? 'AnNexus',
       description: m['description']?.toString() ?? '',
-      iconUrl: m['icon_url']?.toString() ??
-          'https://ui-avatars.com/api/?name=${Uri.encodeComponent(name)}&background=01875F&color=fff',
+      iconUrl: m['icon_url']?.toString() ?? '',
       rating: (m['rating'] as num?)?.toDouble() ?? 4.5,
       downloads: (m['downloads'] as num?)?.toInt() ?? 0,
       category: m['category']?.toString() == 'game' ? 'game' : 'app',
