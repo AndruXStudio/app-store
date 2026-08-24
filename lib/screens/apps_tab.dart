@@ -30,20 +30,27 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
+    final cs = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: () => context.read<AppProvider>().loadApps(),
-        // edgeOffset so indicator appears below large app bar
         edgeOffset: 100,
         child: CustomScrollView(
           physics: const AlwaysScrollableScrollPhysics(
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            SliverAppBar.large(
+            // 可折叠顶部标题栏（与示例一致）
+            SliverAppBar(
+              expandedHeight: 120,
+              floating: false,
               pinned: true,
-              title: const Text('应用'),
+              snap: false,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+              scrolledUnderElevation: 0,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search_rounded),
@@ -68,6 +75,18 @@ class _AppsTabState extends State<AppsTab> {
                   ),
                 ),
               ],
+              flexibleSpace: FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
+                title: Text(
+                  '应用',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                collapseMode: CollapseMode.pin,
+              ),
             ),
             if (provider.loadingApps)
               const SliverFillRemaining(
@@ -97,6 +116,9 @@ class _AppsTabState extends State<AppsTab> {
                   ),
                 ),
               ),
+            // 内容少时也能滑出折叠
+            if (!provider.loadingApps && list.length < 6)
+              const SliverToBoxAdapter(child: SizedBox(height: 280)),
           ],
         ),
       ),

@@ -29,6 +29,7 @@ class _GamesTabState extends State<GamesTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.games;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: RefreshIndicator(
@@ -39,9 +40,14 @@ class _GamesTabState extends State<GamesTab> {
             parent: BouncingScrollPhysics(),
           ),
           slivers: [
-            SliverAppBar.large(
+            SliverAppBar(
+              expandedHeight: 120,
+              floating: false,
               pinned: true,
-              title: const Text('游戏'),
+              snap: false,
+              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+              elevation: 0,
+              scrolledUnderElevation: 0,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search_rounded),
@@ -66,6 +72,18 @@ class _GamesTabState extends State<GamesTab> {
                   ),
                 ),
               ],
+              flexibleSpace: FlexibleSpaceBar(
+                titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
+                title: Text(
+                  '游戏',
+                  style: TextStyle(
+                    color: isDark ? Colors.white : Colors.black,
+                    fontSize: 20,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                collapseMode: CollapseMode.pin,
+              ),
             ),
             if (provider.loadingGames)
               const SliverFillRemaining(
@@ -95,6 +113,8 @@ class _GamesTabState extends State<GamesTab> {
                   ),
                 ),
               ),
+            if (!provider.loadingGames && list.length < 4)
+              const SliverToBoxAdapter(child: SizedBox(height: 280)),
           ],
         ),
       ),

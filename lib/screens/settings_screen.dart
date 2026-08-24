@@ -75,15 +75,39 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Scaffold(
       body: CustomScrollView(
         physics: const AlwaysScrollableScrollPhysics(
           parent: BouncingScrollPhysics(),
         ),
         slivers: [
-          const SliverAppBar.large(
+          // 与示例完全一致的折叠标题栏
+          SliverAppBar(
+            expandedHeight: 120,
+            floating: false,
             pinned: true,
-            title: Text('设置'),
+            snap: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            leading: IconButton(
+              icon: const Icon(Icons.arrow_back_rounded),
+              onPressed: () => Navigator.pop(context),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.only(left: 56, bottom: 12),
+              title: Text(
+                '设置',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              collapseMode: CollapseMode.pin,
+            ),
           ),
           if (_loading)
             const SliverFillRemaining(
@@ -169,7 +193,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                const SizedBox(height: 48),
+                // 保证可滚动，折叠动画能触发
+                const SizedBox(height: 300),
               ]),
             ),
         ],
