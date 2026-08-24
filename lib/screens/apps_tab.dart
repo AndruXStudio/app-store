@@ -31,23 +31,47 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    late final Widget bodySliver;
+    if (provider.loadingApps) {
+      bodySliver = const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else if (list.isEmpty) {
+      bodySliver = const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Text(
+              '暂无已上架应用\n去「我的 → 投稿应用」提交，审核通过后显示',
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      );
+    } else {
+      bodySliver = SliverPadding(
+        padding: const EdgeInsets.only(bottom: 24),
+        sliver: SliverList(
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _AppTile(app: list[index]),
+            childCount: list.length,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          SliverAppBar(
-            expandedHeight: 120.0,
-            floating: false,
+          SliverAppBar.large(
             pinned: true,
-            snap: false,
-            centerTitle: false,
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            elevation: 0,
-            scrolledUnderElevation: 0,
+            title: const Text('应用'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.search_rounded),
@@ -72,52 +96,12 @@ class _AppsTabState extends State<AppsTab> {
                 ),
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: false,
-              titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 14),
-              expandedTitleScale: 1.5,
-              title: Text(
-                '应用',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              collapseMode: CollapseMode.pin,
-            ),
           ),
           CupertinoSliverRefreshControl(
             onRefresh: () => context.read<AppProvider>().loadApps(),
           ),
-          if (provider.loadingApps)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (list.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Padding(
-                  padding: EdgeInsets.all(24),
-                  child: Text(
-                    '暂无已上架应用\n去「我的 → 投稿应用」提交，审核通过后显示',
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.only(bottom: 24),
-              sliver: SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _AppTile(app: list[index]),
-                  childCount: list.length,
-                ),
-              ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 400)),
+          bodySliver,
+          const SliverToBoxAdapter(child: SizedBox(height: 480)),
         ],
       ),
     );

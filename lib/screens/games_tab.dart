@@ -30,24 +30,47 @@ class _GamesTabState extends State<GamesTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.games;
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-    final colorScheme = Theme.of(context).colorScheme;
+
+    late final Widget bodySliver;
+    if (provider.loadingGames) {
+      bodySliver = const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    } else if (list.isEmpty) {
+      bodySliver = const SliverFillRemaining(
+        hasScrollBody: false,
+        child: Center(
+          child: Text('暂无已上架游戏\n发布时把分类选成「游戏」', textAlign: TextAlign.center),
+        ),
+      );
+    } else {
+      bodySliver = SliverPadding(
+        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        sliver: SliverGrid(
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.72,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+          ),
+          delegate: SliverChildBuilderDelegate(
+            (context, index) => _GameCard(app: list[index]),
+            childCount: list.length,
+          ),
+        ),
+      );
+    }
 
     return Scaffold(
       body: CustomScrollView(
-        physics: const BouncingScrollPhysics(
-          parent: AlwaysScrollableScrollPhysics(),
+        physics: const AlwaysScrollableScrollPhysics(
+          parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          SliverAppBar(
-            expandedHeight: 120.0,
-            floating: false,
+          SliverAppBar.large(
             pinned: true,
-            snap: false,
-            centerTitle: false,
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            elevation: 0,
-            scrolledUnderElevation: 0,
+            title: const Text('游戏'),
             actions: [
               IconButton(
                 icon: const Icon(Icons.search_rounded),
@@ -72,52 +95,12 @@ class _GamesTabState extends State<GamesTab> {
                 ),
               ),
             ],
-            flexibleSpace: FlexibleSpaceBar(
-              centerTitle: false,
-              titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 14),
-              expandedTitleScale: 1.5,
-              title: Text(
-                '游戏',
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              collapseMode: CollapseMode.pin,
-            ),
           ),
           CupertinoSliverRefreshControl(
             onRefresh: () => context.read<AppProvider>().loadGames(),
           ),
-          if (provider.loadingGames)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(child: CircularProgressIndicator()),
-            )
-          else if (list.isEmpty)
-            const SliverFillRemaining(
-              hasScrollBody: false,
-              child: Center(
-                child: Text('暂无已上架游戏\n发布时把分类选成「游戏」', textAlign: TextAlign.center),
-              ),
-            )
-          else
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.72,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                delegate: SliverChildBuilderDelegate(
-                  (context, index) => _GameCard(app: list[index]),
-                  childCount: list.length,
-                ),
-              ),
-            ),
-          const SliverToBoxAdapter(child: SizedBox(height: 400)),
+          bodySliver,
+          const SliverToBoxAdapter(child: SizedBox(height: 480)),
         ],
       ),
     );
