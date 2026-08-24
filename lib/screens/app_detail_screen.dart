@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../widgets/app_icon.dart';
 import '../models/app_model.dart';
 import '../services/download_service.dart';
 import '../services/local_data_service.dart';
 import '../services/auth_service.dart';
 import '../services/community_service.dart';
 import '../widgets/role_chip.dart';
+import '../widgets/app_icon.dart';
 import 'user_profile_screen.dart';
 
 class AppDetailScreen extends StatefulWidget {
@@ -155,16 +155,16 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
     );
   }
 
-  void _downloadAsset(DownloadService ds, Map<String, dynamic> asset) {
-    final url = asset['url']?.toString() ?? '';
-    final name = asset['name']?.toString() ?? widget.app.name;
+  void _startDownload(DownloadService ds) {
+    final app = widget.app;
+    final url = app.assets.isNotEmpty
+        ? (app.assets.first['url']?.toString() ?? app.downloadUrl)
+        : app.downloadUrl;
     if (url.isEmpty) return;
-    ds.startDownload(
-      id: '${widget.app.id}_$name',
-      name: name,
-      url: url,
-      iconUrl: widget.app.iconUrl,
-    );
+    final name = app.assets.isNotEmpty
+        ? (app.assets.first['name']?.toString() ?? app.name)
+        : app.name;
+    ds.startDownload(id: app.id, name: name, url: url, iconUrl: app.iconUrl);
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('开始下载 $name')));
   }
 
@@ -185,6 +185,9 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
     return Scaffold(
       body: CustomScrollView(
         slivers: [
+          // ignore: prefer_const_constructors
+          // ignore: sized_box_for_whitespace
+          // ignore: use_colored_box
           SliverAppBar(
             expandedHeight: 200,
             pinned: true,
@@ -201,40 +204,50 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
               background: Container(
                 color: colorScheme.primaryContainer,
                 child: Center(
-                  child: AppIcon(url: app.iconUrl, name: app.name, size: 100, radius: 24),
+                  child: AppIcon(
+                    url: app.iconUrl,
+                    name: app.name,
+                    size: 100,
+                    radius: 24,
                   ),
                 ),
               ),
             ),
           ),
+          // content
+          // ignore: sized_box_for_whitespace
           SliverToBoxAdapter(
             child: Padding(
               padding: const EdgeInsets.all(20),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(app.name,
-                      style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    app.name,
+                    style: theme.textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   const SizedBox(height: 6),
                   Row(
                     children: [
                       Expanded(
                         child: GestureDetector(
-                          onTap: app.submitterUsername != null
-                              ? () {
+                          onTap: app.submitterUsername == null
+                              ? null
+                              : () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          UserProfileScreen(username: app.submitterUsername),
+                                      builder: (_) => UserProfileScreen(
+                                        username: app.submitterUsername,
+                                      ),
                                     ),
                                   );
-                                }
-                              : null,
+                                },
                           child: Text(
                             app.developer,
-                            style: theme.textTheme.titleMedium
-                                ?.copyWith(color: colorScheme.primary),
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: colorScheme.primary,
+                            ),
                           ),
                         ),
                       ),
@@ -246,7 +259,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                     spacing: 8,
                     children: [
                       Chip(label: Text(app.categoryLabel), visualDensity: VisualDensity.compact),
-                      Chip(label: Text('APK'), visualDensity: VisualDensity.compact),
+                      const Chip(label: Text('APK'), visualDensity: VisualDensity.compact),
                       Chip(label: Text(app.size), visualDensity: VisualDensity.compact),
                     ],
                   ),
@@ -266,21 +279,7 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: FilledButton.icon(
-                      onPressed: () {
-                        if (app.assets.isNotEmpty) {
-                          _downloadAsset(downloadService, app.assets.first);
-                        } else if (app.downloadUrl.isNotEmpty) {
-                          downloadService.startDownload(
-                            id: app.id,
-                            name: app.name,
-                            url: app.downloadUrl,
-                            iconUrl: app.iconUrl,
-                          );
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text('开始下载 ${app.name}')),
-                          );
-                        }
-                      },
+                      onPressed: () => _startDownload(downloadService),
                       icon: const Icon(Icons.download_rounded),
                       label: const Text('下载 APK'),
                       style: FilledButton.styleFrom(
@@ -290,19 +289,25 @@ class _AppDetailScreenState extends State<AppDetailScreen> {
                   ),
                   if (app.changelog != null && app.changelog!.isNotEmpty) ...[
                     const SizedBox(height: 16),
-                    Text('版本说明',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      '版本说明',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
                     Text(app.changelog!),
                   ],
                   const SizedBox(height: 16),
-                  Text('关于',
-                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                  Text(
+                    '关于',
+                    style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                  ),
                   Text(app.description),
                   Text('版本 ${app.version}', style: theme.textTheme.bodySmall),
                   if (app.catalogId != null) ...[
                     const Divider(height: 32),
-                    Text('评论',
-                        style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold)),
+                    Text(
+                      '评论',
+                      style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: [
