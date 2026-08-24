@@ -32,12 +32,18 @@ class _AppsTabState extends State<AppsTab> {
     final list = provider.apps;
 
     return Scaffold(
-      body: NestedScrollView(
-        headerSliverBuilder: (context, innerBoxIsScrolled) {
-          return [
+      body: RefreshIndicator(
+        onRefresh: () => context.read<AppProvider>().loadApps(),
+        // edgeOffset so indicator appears below large app bar
+        edgeOffset: 100,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(
+            parent: BouncingScrollPhysics(),
+          ),
+          slivers: [
             SliverAppBar.large(
+              pinned: true,
               title: const Text('应用'),
-              forceElevated: innerBoxIsScrolled,
               actions: [
                 IconButton(
                   icon: const Icon(Icons.search_rounded),
@@ -63,29 +69,36 @@ class _AppsTabState extends State<AppsTab> {
                 ),
               ],
             ),
-          ];
-        },
-        body: provider.loadingApps
-            ? const Center(child: CircularProgressIndicator())
-            : RefreshIndicator(
-                onRefresh: () => context.read<AppProvider>().loadApps(),
-                child: list.isEmpty
-                    ? ListView(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        children: const [
-                          SizedBox(height: 120),
-                          Center(child: Text('暂无已上架应用')),
-                          SizedBox(height: 8),
-                          Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
-                        ],
-                      )
-                    : ListView.builder(
-                        physics: const AlwaysScrollableScrollPhysics(),
-                        padding: const EdgeInsets.symmetric(vertical: 8),
-                        itemCount: list.length,
-                        itemBuilder: (context, index) => _AppTile(app: list[index]),
-                      ),
+            if (provider.loadingApps)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (list.isEmpty)
+              const SliverFillRemaining(
+                hasScrollBody: false,
+                child: Center(
+                  child: Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Text(
+                      '暂无已上架应用\n去「我的 → 投稿应用」提交，审核通过后显示',
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.only(bottom: 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) => _AppTile(app: list[index]),
+                    childCount: list.length,
+                  ),
+                ),
               ),
+          ],
+        ),
       ),
     );
   }
