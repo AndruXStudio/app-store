@@ -1,9 +1,9 @@
 name: Build APK
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
+  push:
+    branches: [ main ]
 
 jobs:
   build:
@@ -11,18 +11,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: subosito/flutter-action@v2
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
         with:
-          channel: stable
+          flutter-version: '3.32.5'
+          channel: 'stable'
           cache: true
 
-      - name: Setup Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Pub get
+      - name: Install dependencies
         run: flutter pub get
 
       - name: Build APK
@@ -31,19 +27,5 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: annexus-apk
+          name: app-release
           path: build/app/outputs/flutter-apk/app-release.apk
-          retention-days: 14
-
-      - name: Upload to release assets folder
-        run: |
-          mkdir -p dist
-          cp build/app/outputs/flutter-apk/app-release.apk dist/AnNexus-1.0.0.apk
-          ls -lh dist/
-
-      - name: Upload named APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: AnNexus-1.0.0
-          path: dist/AnNexus-1.0.0.apk
-          retention-days: 14
