@@ -1,86 +1,68 @@
 import 'package:flutter/foundation.dart';
 import '../models/app_model.dart';
-import '../services/apk_source_service.dart';
+import '../services/catalog_service.dart';
 
 class AppProvider extends ChangeNotifier {
-  final ApkSourceService _api = ApkSourceService();
+  final CatalogService _catalog = CatalogService();
 
-  List<AppModel> _featured = [];
   List<AppModel> _apps = [];
   List<AppModel> _games = [];
-  List<AppModel> _searchResults = [];
-  bool _loadingFeatured = false;
-  bool _loadingApps = false;
-  bool _loadingGames = false;
-  bool _loadingSearch = false;
-  String _searchQuery = '';
-  String _source = 'catalog';
+  List<AppModel> _featured = [];
+  bool loadingApps = false;
+  bool loadingGames = false;
+  bool loadingHome = false;
+  String? error;
 
-  List<AppModel> get featured => _featured;
   List<AppModel> get apps => _apps;
   List<AppModel> get games => _games;
-  List<AppModel> get searchResults => _searchResults;
-  bool get loadingFeatured => _loadingFeatured;
-  bool get loadingApps => _loadingApps;
-  bool get loadingGames => _loadingGames;
-  bool get loadingSearch => _loadingSearch;
-  String get searchQuery => _searchQuery;
-  String get source => _source;
-
-  Future<void> setSource(String source) async {
-    _source = 'catalog';
-    await refreshAll();
-  }
-
-  Future<void> loadFeatured() async {
-    if (_featured.isNotEmpty) return;
-    _loadingFeatured = true;
-    notifyListeners();
-    _featured = await _api.featured();
-    _loadingFeatured = false;
-    notifyListeners();
-  }
+  List<AppModel> get featured => _featured;
 
   Future<void> loadApps() async {
-    _loadingApps = true;
+    loadingApps = true;
+    error = null;
     notifyListeners();
-    _apps = await _api.featured();
-    _loadingApps = false;
+    try {
+      _apps = await _catalog.fetchPublished(category: 'app');
+    } catch (e) {
+      error = e.toString();
+      _apps = [];
+    }
+    loadingApps = false;
     notifyListeners();
   }
 
   Future<void> loadGames() async {
-    _loadingGames = true;
+    loadingGames = true;
+    error = null;
     notifyListeners();
-    _games = await _api.games();
-    _loadingGames = false;
-    notifyListeners();
-  }
-
-  Future<void> search(String query) async {
-    _searchQuery = query;
-    if (query.trim().isEmpty) {
-      _searchResults = [];
-      notifyListeners();
-      return;
+    try {
+      _games = await _catalog.fetchPublished(category: 'game');
+    } catch (e) {
+      error = e.toString();
+      _games = [];
     }
-    _loadingSearch = true;
-    notifyListeners();
-    _searchResults = await _api.search(query);
-    _loadingSearch = false;
+    loadingGames = false;
     notifyListeners();
   }
 
-  void clearSearch() {
-    _searchQuery = '';
-    _searchResults = [];
+  Future<void> loadFeatured() async => loadHome();
+
+  Future<void> loadHome() async {
+    loadingHome = true;
+    notifyListeners();
+    try {
+      final all = await _catalog.fetchPublished();
+      _featured = all.take(8).toList();
+      _apps = all.where((a) => a.category == 'app').toList();
+      _games = all.where((a) => a.category == 'game').toList();
+    } catch (e) {
+      error = e.toString();
+    }
+    loadingHome = false;
     notifyListeners();
   }
 
   Future<void> refreshAll() async {
-    _featured = [];
-    _apps = [];
-    _games = [];
-    await Future.wait([loadFeatured(), loadApps(), loadGames()]);
+    await Future.wait([loadApps(), loadGames(), loadHome()]);
   }
 }

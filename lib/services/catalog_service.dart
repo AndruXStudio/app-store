@@ -52,6 +52,7 @@ class CatalogService {
     String? version,
     String? sizeLabel,
     String category = 'app',
+    String? changelog,
   }) async {
     final user = await _auth.getCurrentUserModel();
     final role = await getMyRole();
@@ -65,6 +66,7 @@ class CatalogService {
       'size_label': sizeLabel ?? '',
       'download_url': downloadUrl,
       'category': category,
+      'changelog': changelog,
       'published': false,
       'status': 'pending',
       'submitter_id': user?.id ?? user?.username,
@@ -86,12 +88,19 @@ class CatalogService {
   }
 
   Future<void> reviewApp(int id, {required bool approve, String? note}) async {
-    await _client.from('apps').update({
-      'status': approve ? 'approved' : 'rejected',
-      'published': approve,
-      'reviewed_at': DateTime.now().toIso8601String(),
-      'review_note': note,
-    }).eq('id', id);
+    final res = await _client
+        .from('apps')
+        .update({
+          'status': approve ? 'approved' : 'rejected',
+          'published': approve,
+          'reviewed_at': DateTime.now().toIso8601String(),
+          'review_note': note,
+        })
+        .eq('id', id)
+        .select('id, status, published');
+    if (res is! List || res.isEmpty) {
+      throw Exception('更新失败：没有权限或记录不存在（请检查 RLS 的 UPDATE 策略）');
+    }
   }
 
   Future<List<AppModel>> fetchBySubmitter(String submitterId) async {
@@ -168,9 +177,12 @@ class CatalogService {
       packageName: m['package_name']?.toString(),
       source: 'catalog',
       publisherRole: role,
+      submitterRole: role,
+      submitterUsername: m['developer']?.toString(),
       catalogId: m['id'] is int ? m['id'] as int : int.tryParse('${m['id']}'),
       submitterId: m['submitter_id']?.toString(),
       status: m['status']?.toString(),
+      changelog: m['changelog']?.toString(),
       assets: downloadUrl.isEmpty
           ? []
           : [

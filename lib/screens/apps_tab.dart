@@ -29,6 +29,7 @@ class _AppsTabState extends State<AppsTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
+    // 只显示 category == app（provider 已过滤）
     final list = provider.apps;
 
     return Scaffold(
@@ -59,14 +60,14 @@ class _AppsTabState extends State<AppsTab> {
         body: provider.loadingApps
             ? const Center(child: CircularProgressIndicator())
             : RefreshIndicator(
-                onRefresh: () => context.read<AppProvider>().refreshAll(),
+                onRefresh: () => context.read<AppProvider>().loadApps(),
                 child: list.isEmpty
                     ? ListView(
                         children: const [
                           SizedBox(height: 120),
                           Center(child: Text('暂无已上架应用')),
                           SizedBox(height: 8),
-                          Center(child: Text('去「我的 → 发布应用」提交，审核通过后显示')),
+                          Center(child: Text('去「我的 → 投稿应用」提交，审核通过后显示')),
                         ],
                       )
                     : ListView.builder(
@@ -118,9 +119,6 @@ class _AppTile extends StatelessWidget {
         },
         child: const Text('查看'),
       ),
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
-      },
     );
   }
 }

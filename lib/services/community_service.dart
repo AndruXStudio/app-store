@@ -110,13 +110,15 @@ class CommunityService {
   }
 
   Future<void> reviewApp(int id, {required bool approve, String? reason}) async {
-    final res = await _c.from('apps').update({
+    final payload = {
       'status': approve ? 'approved' : 'rejected',
       'published': approve,
       'reject_reason': reason,
-    }).eq('id', id).select();
-    if (res is List && res.isEmpty) {
-      throw Exception('更新了 0 行，请在 Supabase 为 apps 表添加 UPDATE 策略');
+      'reviewed_at': DateTime.now().toIso8601String(),
+    };
+    final res = await _c.from('apps').update(payload).eq('id', id).select('id,status,published');
+    if (res is! List || res.isEmpty) {
+      throw Exception('更新失败：没有权限或记录不存在。请在 Supabase SQL 执行 UPDATE 策略。');
     }
   }
 

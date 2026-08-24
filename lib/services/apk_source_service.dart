@@ -1,7 +1,6 @@
 import '../models/app_model.dart';
 import 'catalog_service.dart';
 
-/// 仅用户信任库（Supabase）
 class ApkSourceService {
   final CatalogService _catalog = CatalogService();
 
@@ -11,6 +10,10 @@ class ApkSourceService {
 
   Future<List<AppModel>> featured({String source = 'all'}) async {
     return _catalog.fetchPublished();
+  }
+
+  Future<List<AppModel>> appsOnly() async {
+    return _catalog.fetchPublished(category: 'app');
   }
 
   Future<List<AppModel>> games({String source = 'all'}) async {

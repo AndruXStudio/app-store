@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../providers/app_provider.dart';
 import '../models/app_model.dart';
 import 'app_detail_screen.dart';
 import 'search_screen.dart';
 import 'downloads_screen.dart';
 import '../services/download_service.dart';
+import '../widgets/app_icon.dart';
 
 class GamesTab extends StatefulWidget {
   const GamesTab({super.key});
@@ -28,48 +28,59 @@ class _GamesTabState extends State<GamesTab> {
   Widget build(BuildContext context) {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
+    final list = provider.games;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('游戏'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search_rounded),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
-            },
-          ),
-          Badge(
-            isLabelVisible: downloadService.activeTasks.isNotEmpty,
-            label: Text('${downloadService.activeTasks.length}'),
-            child: IconButton(
-              icon: const Icon(Icons.download_rounded),
-              onPressed: () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
-              },
-            ),
-          ),
-        ],
-      ),
-      body: provider.loadingGames
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: () => context.read<AppProvider>().loadGames(),
-              child: GridView.builder(
-                padding: const EdgeInsets.all(12),
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  childAspectRatio: 0.72,
-                  crossAxisSpacing: 12,
-                  mainAxisSpacing: 12,
-                ),
-                itemCount: provider.games.length,
-                itemBuilder: (context, index) {
-                  final app = provider.games[index];
-                  return _GameCard(app: app);
+      body: NestedScrollView(
+        headerSliverBuilder: (context, innerBoxIsScrolled) => [
+          SliverAppBar.large(
+            title: const Text('游戏'),
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () {
+                  Navigator.push(context, MaterialPageRoute(builder: (_) => const SearchScreen()));
                 },
               ),
-            ),
+              Badge(
+                isLabelVisible: downloadService.activeTasks.isNotEmpty,
+                label: Text('${downloadService.activeTasks.length}'),
+                child: IconButton(
+                  icon: const Icon(Icons.download_rounded),
+                  onPressed: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DownloadsScreen()));
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+        body: provider.loadingGames
+            ? const Center(child: CircularProgressIndicator())
+            : RefreshIndicator(
+                onRefresh: () => context.read<AppProvider>().loadGames(),
+                child: list.isEmpty
+                    ? ListView(
+                        children: const [
+                          SizedBox(height: 120),
+                          Center(child: Text('暂无已上架游戏')),
+                          SizedBox(height: 8),
+                          Center(child: Text('发布时把分类选成「游戏」')),
+                        ],
+                      )
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          childAspectRatio: 0.72,
+                          crossAxisSpacing: 12,
+                          mainAxisSpacing: 12,
+                        ),
+                        itemCount: list.length,
+                        itemBuilder: (context, index) => _GameCard(app: list[index]),
+                      ),
+              ),
+      ),
     );
   }
 }
@@ -83,23 +94,21 @@ class _GameCard extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     return Card(
       clipBehavior: Clip.antiAlias,
-      elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: InkWell(
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)));
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => AppDetailScreen(app: app)),
+          );
         },
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: Container(
-                width: double.infinity,
                 color: colorScheme.surfaceContainerHighest,
-                child: CachedNetworkImage(
-                  imageUrl: app.iconUrl,
-                  fit: BoxFit.cover,
-                  errorWidget: (_, __, ___) => Icon(Icons.sports_esports_rounded, size: 48, color: colorScheme.primary),
+                child: Center(
+                  child: AppIcon(url: app.iconUrl, name: app.name, size: 72, radius: 16),
                 ),
               ),
             ),

@@ -18,30 +18,32 @@ class AppIcon extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final u = url?.trim() ?? '';
+    final u = (url ?? '').trim();
     Widget child;
 
-    if (u.startsWith('data:image')) {
+    if (u.startsWith('data:image') && u.contains(',')) {
       try {
-        final b64 = u.split(',').last;
-        final bytes = base64Decode(b64);
-        child = Image.memory(bytes, width: size, height: size, fit: BoxFit.cover);
+        final bytes = base64Decode(u.split(',').last);
+        child = Image.memory(
+          bytes,
+          width: size,
+          height: size,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => _fallback(context),
+        );
       } catch (_) {
         child = _fallback(context);
       }
-    } else if (u.startsWith('http')) {
+    } else if (u.startsWith('http://') || u.startsWith('https://')) {
       child = CachedNetworkImage(
         imageUrl: u,
         width: size,
         height: size,
         fit: BoxFit.cover,
+        memCacheWidth: (size * 3).toInt(),
+        fadeInDuration: Duration.zero,
         errorWidget: (_, __, ___) => _fallback(context),
-        placeholder: (_, __) => Container(
-          width: size,
-          height: size,
-          color: Colors.grey.shade300,
-          child: const Center(child: SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))),
-        ),
+        placeholder: (_, __) => _fallback(context),
       );
     } else {
       child = _fallback(context);
@@ -54,7 +56,7 @@ class AppIcon extends StatelessWidget {
   }
 
   Widget _fallback(BuildContext context) {
-    final letter = name.isNotEmpty ? name.characters.first : '?';
+    final letter = name.trim().isNotEmpty ? name.trim().characters.first : 'A';
     return Container(
       width: size,
       height: size,
