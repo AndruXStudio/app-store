@@ -92,6 +92,8 @@ class LocalDataService {
     await _setList(_histKey, []);
   }
 
+  Future<Map<String, dynamic>> loadSettings() async => getSettings();
+
   Future<Map<String, dynamic>> getSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_settingsKey);
