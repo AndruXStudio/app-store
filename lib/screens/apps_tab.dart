@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/app_provider.dart';
@@ -30,96 +31,94 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      body: RefreshIndicator(
-        onRefresh: () => context.read<AppProvider>().loadApps(),
-        edgeOffset: 100,
-        child: CustomScrollView(
-          physics: const AlwaysScrollableScrollPhysics(
-            parent: BouncingScrollPhysics(),
-          ),
-          slivers: [
-            // 可折叠顶部标题栏（与你给的示例一致）
-            SliverAppBar(
-              expandedHeight: 120.0,
-              floating: false,
-              pinned: true,
-              snap: false,
-              backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-              elevation: 0,
-              scrolledUnderElevation: 0,
-              actions: [
-                IconButton(
-                  icon: const Icon(Icons.search_rounded),
+      body: CustomScrollView(
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
+        ),
+        slivers: [
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
+            pinned: true,
+            snap: false,
+            centerTitle: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.search_rounded),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SearchScreen()),
+                  );
+                },
+              ),
+              Badge(
+                isLabelVisible: downloadService.activeTasks.isNotEmpty,
+                label: Text('${downloadService.activeTasks.length}'),
+                child: IconButton(
+                  icon: const Icon(Icons.download_rounded),
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (_) => const SearchScreen()),
+                      MaterialPageRoute(builder: (_) => const DownloadsScreen()),
                     );
                   },
                 ),
-                Badge(
-                  isLabelVisible: downloadService.activeTasks.isNotEmpty,
-                  label: Text('${downloadService.activeTasks.length}'),
-                  child: IconButton(
-                    icon: const Icon(Icons.download_rounded),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (_) => const DownloadsScreen()),
-                      );
-                    },
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              titlePadding: const EdgeInsetsDirectional.only(start: 16, bottom: 14),
+              expandedTitleScale: 1.5,
+              title: Text(
+                '应用',
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              collapseMode: CollapseMode.pin,
+            ),
+          ),
+          CupertinoSliverRefreshControl(
+            onRefresh: () => context.read<AppProvider>().loadApps(),
+          ),
+          if (provider.loadingApps)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(child: CircularProgressIndicator()),
+            )
+          else if (list.isEmpty)
+            const SliverFillRemaining(
+              hasScrollBody: false,
+              child: Center(
+                child: Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Text(
+                    '暂无已上架应用\n去「我的 → 投稿应用」提交，审核通过后显示',
+                    textAlign: TextAlign.center,
                   ),
                 ),
-              ],
-              flexibleSpace: FlexibleSpaceBar(
-                titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
-                title: Text(
-                  '应用',
-                  style: TextStyle(
-                    color: scheme.onSurface,
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
-                  ),
+              ),
+            )
+          else
+            SliverPadding(
+              padding: const EdgeInsets.only(bottom: 24),
+              sliver: SliverList(
+                delegate: SliverChildBuilderDelegate(
+                  (context, index) => _AppTile(app: list[index]),
+                  childCount: list.length,
                 ),
-                collapseMode: CollapseMode.pin,
               ),
             ),
-            if (provider.loadingApps)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(child: CircularProgressIndicator()),
-              )
-            else if (list.isEmpty)
-              const SliverFillRemaining(
-                hasScrollBody: false,
-                child: Center(
-                  child: Padding(
-                    padding: EdgeInsets.all(24),
-                    child: Text(
-                      '暂无已上架应用\n去「我的 → 投稿应用」提交，审核通过后显示',
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.only(bottom: 24),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) => _AppTile(app: list[index]),
-                    childCount: list.length,
-                  ),
-                ),
-              ),
-            // 保证内容少时也能上滑折叠
-            if (!provider.loadingApps && list.length < 8)
-              const SliverToBoxAdapter(child: SizedBox(height: 300)),
-          ],
-        ),
+          const SliverToBoxAdapter(child: SizedBox(height: 400)),
+        ],
       ),
     );
   }

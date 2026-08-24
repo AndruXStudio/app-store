@@ -75,20 +75,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
       body: CustomScrollView(
-        physics: const AlwaysScrollableScrollPhysics(
-          parent: BouncingScrollPhysics(),
+        physics: const BouncingScrollPhysics(
+          parent: AlwaysScrollableScrollPhysics(),
         ),
         slivers: [
-          // 与你示例一致的折叠标题栏
           SliverAppBar(
             expandedHeight: 120.0,
             floating: false,
             pinned: true,
             snap: false,
+            centerTitle: false,
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
             elevation: 0,
             scrolledUnderElevation: 0,
@@ -97,12 +97,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               onPressed: () => Navigator.of(context).maybePop(),
             ),
             flexibleSpace: FlexibleSpaceBar(
-              titlePadding: const EdgeInsets.only(left: 56, bottom: 12),
+              centerTitle: false,
+              // 有 leading 时左边留出返回键空间，折叠后标题不会歪
+              titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 14),
+              expandedTitleScale: 1.5,
               title: Text(
                 '设置',
                 style: TextStyle(
-                  color: scheme.onSurface,
-                  fontSize: 20,
+                  color: isDark ? Colors.white : Colors.black,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -193,8 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     );
                   },
                 ),
-                // 保证可滚动以触发折叠动画
-                const SizedBox(height: 300),
+                const SizedBox(height: 400),
               ]),
             ),
         ],
