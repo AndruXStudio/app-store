@@ -30,6 +30,7 @@ class _GamesTabState extends State<GamesTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.games;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     late final Widget bodySliver;
     if (provider.loadingGames) {
@@ -68,9 +69,15 @@ class _GamesTabState extends State<GamesTab> {
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          SliverAppBar.large(
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
             pinned: true,
-            title: const Text('游戏'),
+            snap: false,
+            centerTitle: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
             actions: [
               IconButton(
                 icon: const Icon(Icons.search_rounded),
@@ -95,6 +102,19 @@ class _GamesTabState extends State<GamesTab> {
                 ),
               ),
             ],
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
+              expandedTitleScale: 1.5,
+              title: Text(
+                '游戏',
+                style: TextStyle(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              collapseMode: CollapseMode.pin,
+            ),
           ),
           CupertinoSliverRefreshControl(
             onRefresh: () => context.read<AppProvider>().loadGames(),

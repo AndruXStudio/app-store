@@ -31,6 +31,7 @@ class _AppsTabState extends State<AppsTab> {
     final provider = context.watch<AppProvider>();
     final downloadService = context.watch<DownloadService>();
     final list = provider.apps;
+    final onSurface = Theme.of(context).colorScheme.onSurface;
 
     late final Widget bodySliver;
     if (provider.loadingApps) {
@@ -69,9 +70,15 @@ class _AppsTabState extends State<AppsTab> {
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          SliverAppBar.large(
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
             pinned: true,
-            title: const Text('应用'),
+            snap: false,
+            centerTitle: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
             actions: [
               IconButton(
                 icon: const Icon(Icons.search_rounded),
@@ -96,6 +103,19 @@ class _AppsTabState extends State<AppsTab> {
                 ),
               ),
             ],
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              titlePadding: const EdgeInsets.only(left: 16, bottom: 12),
+              expandedTitleScale: 1.5,
+              title: Text(
+                '应用',
+                style: TextStyle(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              collapseMode: CollapseMode.pin,
+            ),
           ),
           CupertinoSliverRefreshControl(
             onRefresh: () => context.read<AppProvider>().loadApps(),

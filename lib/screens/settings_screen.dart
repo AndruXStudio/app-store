@@ -76,6 +76,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final onSurface = Theme.of(context).colorScheme.onSurface;
+
     final items = <Widget>[
       _section('外观'),
       ListTile(
@@ -162,12 +164,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          SliverAppBar.large(
+          // 与你给的示例一致 + 修标题偏移
+          SliverAppBar(
+            expandedHeight: 120.0,
+            floating: false,
             pinned: true,
-            title: const Text('设置'),
+            snap: false,
+            centerTitle: false,
+            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+            elevation: 0,
+            scrolledUnderElevation: 0,
             leading: IconButton(
               icon: const Icon(Icons.arrow_back_rounded),
               onPressed: () => Navigator.of(context).maybePop(),
+            ),
+            flexibleSpace: FlexibleSpaceBar(
+              centerTitle: false,
+              // 有返回键：折叠后不挤在一起
+              titlePadding: const EdgeInsets.only(left: 56, bottom: 12),
+              expandedTitleScale: 1.5,
+              title: Text(
+                '设置',
+                style: TextStyle(
+                  color: onSurface,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              collapseMode: CollapseMode.pin,
             ),
           ),
           if (_loading)
