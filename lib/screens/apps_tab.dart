@@ -54,7 +54,7 @@ class _AppsTabState extends State<AppsTab> {
       );
     } else {
       bodySliver = SliverPadding(
-        padding: const EdgeInsets.only(bottom: 24),
+        padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
         sliver: SliverList(
           delegate: SliverChildBuilderDelegate(
             (context, index) => _AppTile(app: list[index]),
@@ -121,7 +121,6 @@ class _AppsTabState extends State<AppsTab> {
             onRefresh: () => context.read<AppProvider>().loadApps(),
           ),
           bodySliver,
-          const SliverToBoxAdapter(child: SizedBox(height: 480)),
         ],
       ),
     );

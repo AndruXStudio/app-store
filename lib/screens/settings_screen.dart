@@ -155,7 +155,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
-      const SizedBox(height: 480),
+      // 仅少量底部留白，方便滚到最后一项，不再大片空白
+      const SizedBox(height: 32),
     ];
 
     return Scaffold(
@@ -164,9 +165,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
           parent: ClampingScrollPhysics(),
         ),
         slivers: [
-          // 与你给的示例一致 + 修标题偏移
           SliverAppBar(
-            expandedHeight: 120.0,
+            expandedHeight: 132.0,
             floating: false,
             pinned: true,
             snap: false,
@@ -180,9 +180,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             flexibleSpace: FlexibleSpaceBar(
               centerTitle: false,
-              // 有返回键：折叠后不挤在一起
-              titlePadding: const EdgeInsets.only(left: 56, bottom: 12),
-              expandedTitleScale: 1.5,
+              // 参考第二视频：折叠后紧挨返回键，展开时大标题在下方左侧
+              titlePadding: const EdgeInsetsDirectional.only(start: 56, bottom: 16),
+              expandedTitleScale: 1.6,
               title: Text(
                 '设置',
                 style: TextStyle(

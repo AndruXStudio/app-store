@@ -46,8 +46,9 @@ class _GamesTabState extends State<GamesTab> {
         ),
       );
     } else {
+      // 顶部多留一点，避免卡片顶到折叠栏
       bodySliver = SliverPadding(
-        padding: const EdgeInsets.fromLTRB(12, 8, 12, 24),
+        padding: const EdgeInsets.fromLTRB(12, 12, 12, 24),
         sliver: SliverGrid(
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
@@ -120,7 +121,6 @@ class _GamesTabState extends State<GamesTab> {
             onRefresh: () => context.read<AppProvider>().loadGames(),
           ),
           bodySliver,
-          const SliverToBoxAdapter(child: SizedBox(height: 480)),
         ],
       ),
     );
