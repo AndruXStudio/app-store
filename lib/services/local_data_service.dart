@@ -103,6 +103,7 @@ class LocalDataService {
         'wifiOnlyDownload': false,
         'showPreRelease': true,
         'language': 'zh',
+        'homePageUrl': '', // 首页嵌入的静态网页
       };
     }
     return Map<String, dynamic>.from(jsonDecode(raw));

@@ -79,6 +79,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final onSurface = Theme.of(context).colorScheme.onSurface;
 
     final items = <Widget>[
+      _section('首页'),
+      ListTile(
+        leading: const Icon(Icons.language_rounded),
+        title: const Text('首页网页地址'),
+        subtitle: Text(
+          (_settings['homePageUrl'] as String?)?.isNotEmpty == true
+              ? _settings['homePageUrl']
+              : '未设置（点击填写静态站 URL）',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        trailing: const Icon(Icons.chevron_right_rounded),
+        onTap: () async {
+          final ctrl = TextEditingController(
+            text: (_settings['homePageUrl'] as String?) ?? '',
+          );
+          final v = await showDialog<String>(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              title: const Text('首页网页地址'),
+              content: TextField(
+                controller: ctrl,
+                decoration: const InputDecoration(
+                  hintText: 'https://example.com/catalog',
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.url,
+                autofocus: true,
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('取消')),
+                FilledButton(
+                  onPressed: () => Navigator.pop(ctx, ctrl.text.trim()),
+                  child: const Text('保存'),
+                ),
+              ],
+            ),
+          );
+          if (v != null) await _update('homePageUrl', v);
+        },
+      ),
       _section('外观'),
       ListTile(
         leading: const Icon(Icons.brightness_6_rounded),
